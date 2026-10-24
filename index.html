@@ -15,6 +15,9 @@
     
     <!-- 設定加入主畫面時的 App 名稱 -->
     <meta name="apple-mobile-web-app-title" content="健康日記">
+
+    <!-- iOS 桌面圖示專用設定 -->
+    <link rel="apple-touch-icon" href="icon.png">
     
     <!-- 載入 App 設定檔 -->
     <link rel="manifest" href="manifest.json">
@@ -460,24 +463,53 @@
             else { avatar.innerText = '🌰'; text.innerText = "階段 1: 沉睡的種子"; }
         }
 
-        // --- 大花園邏輯 (總收藏, 隨機分布最多20朵) ---
+        // --- 大花園邏輯 (只顯示已收集成功的植物，最多隨機20朵) ---
         function updateGardenLandscape() {
-            const totalDaysLogged = Object.keys(recordsDB).length;
-            // 每記錄1天就多1朵花(最高20朵) 或是你可以改為 /5, /20
-            const flowerCount = Math.min(20, totalDaysLogged); 
-            
-            document.getElementById('total-flowers-count').innerText = flowerCount;
+            // 1. 計算每個月累積了幾天紀錄
+            const monthCounts = {};
+            Object.keys(recordsDB).forEach(dateKey => {
+                const yyyy_mm = dateKey.substring(0, 7); // 取得 YYYY-MM
+                if(!monthCounts[yyyy_mm]) monthCounts[yyyy_mm] = 0;
+                monthCounts[yyyy_mm]++;
+            });
+
+            // 2. 找出累積滿 20 天的月份，將對應的花加入「已解鎖名單」
+            const collectedPlants = [];
+            for (const [yyyy_mm, days] of Object.entries(monthCounts)) {
+                if (days >= 20) {
+                    const [y, m] = yyyy_mm.split('-');
+                    const index = ((parseInt(y) - startYear) * 12) + (parseInt(m) - 1);
+                    const flower = fiveYearPlants[Math.max(0, index) % fiveYearPlants.length];
+                    if (!collectedPlants.includes(flower)) {
+                        collectedPlants.push(flower); // 加入解鎖圖鑑
+                    }
+                }
+            }
+
             const gardenArea = document.getElementById('garden-landscape');
-            gardenArea.innerHTML = ''; // 清空重新生成
+            gardenArea.innerHTML = ''; 
             
-            for(let i = 0; i < flowerCount; i++) {
-                // 隨機選一種植物
-                const flowerEmoji = fiveYearPlants[Math.floor(Math.random() * fiveYearPlants.length)];
-                // 隨機位置 (避免太靠近邊緣)
-                const top = 10 + Math.random() * 65; // 10% ~ 75%
-                const left = 5 + Math.random() * 80; // 5% ~ 85%
-                const size = 1.5 + Math.random() * 1.5; // 1.5rem ~ 3rem
-                const delay = Math.random() * 2; // 動畫延遲
+            // 如果連一個品種都還沒解鎖 (提醒持續紀錄)
+            if (collectedPlants.length === 0) {
+                document.getElementById('total-flowers-count').innerText = 0;
+                gardenArea.innerHTML = '<div style="display:flex; height:100%; align-items:center; justify-content:center; text-align:center; padding:20px; color:rgba(0,0,0,0.5); font-weight:bold; font-size:1.1rem; line-height:1.5;">🌱<br>目前花園空空如也<br>只要任一個月紀錄滿 20 天<br>專屬花朵就會移植到這裡喔！</div>';
+                return;
+            }
+
+            // 3. 決定要顯示的花朵數量 (總天數，但最高不超過 20 朵)
+            const totalDaysLogged = Object.keys(recordsDB).length;
+            const displayCount = Math.min(20, totalDaysLogged);
+            
+            document.getElementById('total-flowers-count').innerText = displayCount;
+
+            for(let i = 0; i < displayCount; i++) {
+                // 從「已解鎖」的名單中隨機挑選植物
+                const flowerEmoji = collectedPlants[Math.floor(Math.random() * collectedPlants.length)];
+                
+                const top = 10 + Math.random() * 65; 
+                const left = 5 + Math.random() * 80; 
+                const size = 1.5 + Math.random() * 1.5; 
+                const delay = Math.random() * 2; 
                 
                 const span = document.createElement('span');
                 span.className = 'garden-flower';
@@ -486,7 +518,7 @@
                 span.style.left = left + '%';
                 span.style.fontSize = size + 'rem';
                 span.style.animationDelay = delay + 's';
-                span.style.zIndex = Math.floor(top); // 越下方層級越高
+                span.style.zIndex = Math.floor(top); 
                 
                 gardenArea.appendChild(span);
             }
