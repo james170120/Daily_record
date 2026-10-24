@@ -83,6 +83,32 @@
         .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00b4db, var(--primary)); box-shadow: 0 0 10px var(--primary-glow); transition: width 0.5s ease-in-out; }
         .stage-info { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; }
 
+        /* 花園新物件：大樹與雲朵 */
+        .big-tree {
+            position: absolute;
+            left: 0%;
+            bottom: 8%;
+            font-size: 8rem;
+            z-index: 75; /* 與植物的層級融合 */
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.4));
+            transform-origin: bottom center;
+            animation: sway 4s infinite ease-in-out;
+        }
+        
+        .garden-cloud {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.9;
+            z-index: 15; /* 必須大於太陽/月亮的 10，才能遮住它們 */
+            animation: driftCloud linear infinite;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.1));
+        }
+
+        @keyframes driftCloud {
+            0% { left: -20%; }
+            100% { left: 110%; }
+        }
+
         /* --- 柔和插畫風行事曆 --- */
         #page-calendar { background-color: #ffffff; color: #333; min-height: 100vh; padding: 0; } 
         .cal-wrapper { padding: 15px; }
@@ -496,7 +522,7 @@
             }
         }
 
-        // --- 大花園邏輯 (自動補上預設植物) ---
+        // --- 大花園邏輯 (包含大樹、飄雲與區域劃分) ---
         function updateGardenLandscape() {
             const monthCounts = {};
             Object.keys(recordsDB).forEach(dateKey => {
@@ -515,21 +541,16 @@
                 }
             }
 
-            // 如果還沒解鎖任何植物，預設送一株幸運草
-            if (collectedPlants.length === 0) {
-                collectedPlants.push('🍀');
-            }
+            if (collectedPlants.length === 0) collectedPlants.push('🍀');
 
             const gardenArea = document.getElementById('garden-landscape');
             gardenArea.innerHTML = ''; 
             
             const totalDaysLogged = Object.keys(recordsDB).length;
-            // 決定顯示數量 (最少顯示1株，最多20株)
             const displayCount = Math.max(1, Math.min(20, totalDaysLogged));
-            
-            document.getElementById('total-flowers-count').innerText = totalDaysLogged; // 顯示實際天數作為經驗值
+            document.getElementById('total-flowers-count').innerText = totalDaysLogged; 
 
-            // 日夜變化
+            // --- 日夜、天體與星星 ---
             const hour = new Date().getHours();
             const isDay = hour >= 6 && hour < 18;
             gardenArea.className = 'garden-landscape ' + (isDay ? 'sky-day' : 'sky-night');
@@ -551,12 +572,36 @@
                 }
             }
 
-            // 產生植物
+            // --- 飄移的雲朵 (上方 1/4) ---
+            for(let i = 0; i < 3; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'garden-cloud';
+                cloud.innerText = '☁️';
+                // 高度限制在上方 2% ~ 20%
+                cloud.style.top = (2 + Math.random() * 18) + '%'; 
+                cloud.style.fontSize = (2.5 + Math.random() * 1.5) + 'rem'; 
+                cloud.style.animationDuration = (25 + Math.random() * 35) + 's'; // 移動速度隨機 (25~60秒)
+                // 負數 delay 讓雲朵一開始就自然散佈在畫面中，而不是從最左邊排隊出來
+                cloud.style.animationDelay = '-' + (Math.random() * 40) + 's'; 
+                gardenArea.appendChild(cloud);
+            }
+
+            // --- 固定在左側的大樹 ---
+            const bigTree = document.createElement('div');
+            bigTree.className = 'big-tree';
+            bigTree.innerText = '🌳';
+            gardenArea.appendChild(bigTree);
+
+            // --- 產生植物 (限定在下方 1/4) ---
             for(let i = 0; i < displayCount; i++) {
                 const flowerEmoji = collectedPlants[Math.floor(Math.random() * collectedPlants.length)];
-                const top = 10 + Math.random() * 65; 
-                const left = 5 + Math.random() * 80; 
-                const size = 1.5 + Math.random() * 1.5; 
+                
+                // top 改為 75% ~ 90% (畫面下方 1/4)
+                const top = 75 + Math.random() * 15; 
+                // left 改為 25% ~ 90%，避開左側的大樹，才不會擠在一起
+                const left = 25 + Math.random() * 65; 
+                
+                const size = 1.2 + Math.random() * 1.2; 
                 const delay = Math.random() * 2; 
                 
                 const span = document.createElement('span');
