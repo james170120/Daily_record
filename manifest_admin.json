@@ -1,0 +1,15 @@
+{
+  "name": "健康後台管理",
+  "short_name": "健康後台",
+  "display": "standalone",
+  "background_color": "#f4f7f5",
+  "theme_color": "#7a945b",
+  "start_url": "./admin.html",
+  "icons": [
+    {
+      "src": "DBicon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}
