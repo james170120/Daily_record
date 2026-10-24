@@ -87,7 +87,7 @@
         .big-tree {
             position: absolute;
             left: 0%;
-            bottom: 2%;
+            bottom: -4%;
             font-size: 8rem;
             z-index: 75; /* 與植物的層級融合 */
             filter: drop-shadow(0 10px 10px rgba(0,0,0,0.4));
@@ -756,20 +756,13 @@
         loadData();
 
 
-        // 點擊空白處(半透明背景)自動關閉視窗
-        window.addEventListener('click', function(event) {
-            const recordModal = document.getElementById('record-modal');
-            const detailModal = document.getElementById('detail-modal');
-            
-            // 如果點擊目標是「新增紀錄」的黑色背景
-            if (event.target === recordModal) {
-                recordModal.style.display = 'none';
-            }
-            
-            // 如果點擊目標是「查看明細」的黑色背景
-            if (event.target === detailModal) {
-                detailModal.style.display = 'none';
-            }
+        // 點擊空白處自動關閉視窗 (修正手機瀏覽器觸控限制)
+        document.getElementById('record-modal').addEventListener('click', function(event) {
+            if (event.target === this) this.style.display = 'none';
+        });
+        
+        document.getElementById('detail-modal').addEventListener('click', function(event) {
+            if (event.target === this) this.style.display = 'none';
         });
 
 
