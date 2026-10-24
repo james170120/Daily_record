@@ -112,35 +112,35 @@
         .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; color: #ffffff; font-size: 1.2rem; font-weight: bold; }
         .calendar-nav-btn { background: transparent; border: none; color: var(--text-color); font-size: 1.2rem; cursor: pointer; }
         
-        /* --- 鎖定各個頁面的滑動行為，防止畫面亂飄 --- */
-        /* 1. 紀錄與行事曆：禁止左右滑動，保留上下滑動 (避免小手機按鈕被切到) */
-        #page-record, #page-calendar { overflow-x: hidden; touch-action: pan-y; }
+        /* --- 鎖定滑動行為 --- */
+        body { overflow-x: hidden; /* 徹底禁止整個網頁左右亂晃 */ }
+        #page-plant, #page-garden { overflow: hidden; touch-action: none; /* 盆栽與花園完全鎖死 */ }
+        #page-record, #page-calendar { overflow-y: auto; overflow-x: hidden; /* 紀錄與日曆可上下滑動 */ }
+
+        /* --- 行事曆區塊 (版面修正) --- */
+        #page-calendar { padding: 10px 4px; /* 縮小左右邊距，讓格子有空間呼吸 */ }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; color: #ffffff; font-size: 1.2rem; font-weight: bold; }
+        .calendar-nav-btn { background: transparent; border: none; color: var(--text-color); font-size: 1.2rem; cursor: pointer; }
         
-        /* 2. 盆栽與花園：完全鎖死，禁止任何上下左右滑動與彈跳 */
-        #page-plant, #page-garden { overflow: hidden; touch-action: none; }
-
-
-        /* 統一左右邊距，解決畫面偏右的問題 */
-        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: #8b949e; font-size: 0.9rem; margin-bottom: 10px; padding: 0 10px; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 0 10px 20px 10px; }
+        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: #8b949e; font-size: 0.9rem; margin-bottom: 10px; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 0 4px 20px 4px; }
         
         .day-cell {
-            aspect-ratio: 3/4; /* 從正方形改為「直式長方形」，給圖示更多空間 */
+            min-height: 70px; /* 放棄強制比例，改用最小高度，避免太長被切斷 */
             background: rgba(255, 255, 255, 0.06); 
-            border-radius: 10px; 
+            border-radius: 8px; 
             border: 1px solid rgba(255, 255, 255, 0.05); 
             box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
             display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
             padding-top: 6px; color: #e1e4e8; cursor: pointer;
-            transition: transform 0.15s ease, background 0.2s;
+            transition: transform 0.1s ease;
         }
         
         .day-cell:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.1); }
-        
         .day-cell.today { background: rgba(122, 148, 91, 0.25); border: 1px solid var(--primary); color: #ffffff; font-weight: bold; }
         .day-cell.empty { background: transparent; border: none; box-shadow: none; pointer-events: none; }
         
-        /* 圖示容器，最多塞 4 個小圖示並自動換行 */
         .record-icons { display: flex; gap: 2px; margin-top: auto; padding-bottom: 5px; flex-wrap: wrap; justify-content: center; font-size: 0.8rem; }
         
         .dot { width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
@@ -623,7 +623,7 @@
             }
         }
 
-        // --- 產生行事曆 (深色玻璃浮雕版 + 4大類圖示) ---
+        // --- 產生行事曆 (深色玻璃浮雕版 + 4大類圖示 + 精準對齊) ---
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1; 
@@ -632,18 +632,21 @@
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
             
+            // 精準計算該月第一天是星期幾，並轉換為需要幾個「空白格子」
             let firstDay = new Date(year, month - 1, 1).getDay();
-            if (firstDay === 0) firstDay = 7;
+            let emptyDays = firstDay === 0 ? 6 : firstDay - 1; // 星期一=0個空白, 星期二=1個...星期日=6個
             
             const daysInMonth = new Date(year, month, 0).getDate();
             const today = new Date();
             
-            for (let i = 1; i < firstDay; i++) {
+            // 填補月初的空白格子
+            for (let i = 0; i < emptyDays; i++) {
                 const emptyCell = document.createElement('div');
                 emptyCell.className = 'day-cell empty';
                 grid.appendChild(emptyCell);
             }
             
+            // 填入當月日期
             for (let d = 1; d <= daysInMonth; d++) {
                 const cell = document.createElement('div');
                 cell.className = 'day-cell';
@@ -663,7 +666,6 @@
                     
                     let hasFood = false, hasInsulin = false, hasMed = false, hasStatus = false;
                     
-                    // 檢查當天有哪些類別的紀錄
                     recordsDB[dateStr].forEach(r => {
                         if (r.category === 'food' || r.type.includes('餐') || r.type === '點心') hasFood = true;
                         if (r.type === '胰島素') hasInsulin = true;
@@ -671,7 +673,6 @@
                         if (r.category === 'status' || r.type === '身體狀況') hasStatus = true;
                     });
                     
-                    // 最多只印出這 4 種代表圖示，確保格子不會被無限拉長
                     if(hasFood) iconsContainer.innerHTML += '<span>🍽️</span>';
                     if(hasInsulin) iconsContainer.innerHTML += '<span>💉</span>';
                     if(hasMed) iconsContainer.innerHTML += '<span>💊</span>';
