@@ -586,10 +586,11 @@
                 gardenArea.appendChild(cloud);
             }
 
-            // --- 固定在左側的大樹 ---
+            // --- 固定在左側的大樹 (拉高不拉寬) ---
             const bigTree = document.createElement('div');
             bigTree.className = 'big-tree';
-            bigTree.innerText = '🌳';
+            // 透過 transform: scale(1, 1.8) 讓寬度保持 1 倍，高度拉長為 1.8 倍
+            bigTree.innerHTML = '<div style="transform: scale(1, 1.8); transform-origin: bottom center;">🌳</div>';
             gardenArea.appendChild(bigTree);
 
             // --- 產生植物 (限定在下方 1/4) ---
