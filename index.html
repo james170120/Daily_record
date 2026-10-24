@@ -87,12 +87,12 @@
         .big-tree {
             position: absolute;
             left: 0%;
-            bottom: 8%;
+            bottom: 2%;
             font-size: 8rem;
             z-index: 75; /* 與植物的層級融合 */
             filter: drop-shadow(0 10px 10px rgba(0,0,0,0.4));
             transform-origin: bottom center;
-            animation: sway 4s infinite ease-in-out;
+            /* animation: sway 4s infinite ease-in-out;  /*動畫先移除不用，有要用在把前面斜線+*刪除
         }
         
         .garden-cloud {
@@ -754,6 +754,25 @@
 
         // 啟動載入
         loadData();
+
+
+        // 點擊空白處(半透明背景)自動關閉視窗
+        window.addEventListener('click', function(event) {
+            const recordModal = document.getElementById('record-modal');
+            const detailModal = document.getElementById('detail-modal');
+            
+            // 如果點擊目標是「新增紀錄」的黑色背景
+            if (event.target === recordModal) {
+                recordModal.style.display = 'none';
+            }
+            
+            // 如果點擊目標是「查看明細」的黑色背景
+            if (event.target === detailModal) {
+                detailModal.style.display = 'none';
+            }
+        });
+
+        
     </script>
 </body>
 </html>
