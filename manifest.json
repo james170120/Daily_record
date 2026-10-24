@@ -1,0 +1,8 @@
+{
+  "name": "媽媽的健康日記",
+  "short_name": "健康日記",
+  "display": "standalone",
+  "background_color": "#121418",
+  "theme_color": "#121418",
+  "start_url": "./index.html"
+}
