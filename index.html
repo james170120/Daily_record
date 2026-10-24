@@ -112,14 +112,17 @@
         .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; color: #ffffff; font-size: 1.2rem; font-weight: bold; }
         .calendar-nav-btn { background: transparent; border: none; color: var(--text-color); font-size: 1.2rem; cursor: pointer; }
         
-        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: #8b949e; font-size: 0.9rem; margin-bottom: 10px; }
-        
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; padding: 0 15px 20px 15px; }
+        /* 鎖定行事曆頁面，防止左右滑動亂飄 */
+        #page-calendar { overflow-x: hidden; touch-action: pan-y; }
+
+        /* 統一左右邊距，解決畫面偏右的問題 */
+        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: #8b949e; font-size: 0.9rem; margin-bottom: 10px; padding: 0 10px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 0 10px 20px 10px; }
         
         .day-cell {
-            aspect-ratio: 1; 
+            aspect-ratio: 3/4; /* 從正方形改為「直式長方形」，給圖示更多空間 */
             background: rgba(255, 255, 255, 0.06); 
-            border-radius: 12px; 
+            border-radius: 10px; 
             border: 1px solid rgba(255, 255, 255, 0.05); 
             box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
             display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -129,15 +132,11 @@
         
         .day-cell:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.1); }
         
-        .day-cell.today {
-            background: rgba(122, 148, 91, 0.25);
-            border: 1px solid var(--primary);
-            color: #ffffff; font-weight: bold;
-        }
-        
+        .day-cell.today { background: rgba(122, 148, 91, 0.25); border: 1px solid var(--primary); color: #ffffff; font-weight: bold; }
         .day-cell.empty { background: transparent; border: none; box-shadow: none; pointer-events: none; }
         
-        .record-dots { display: flex; gap: 4px; margin-top: auto; padding-bottom: 8px; flex-wrap: wrap; justify-content: center; }
+        /* 圖示容器，最多塞 4 個小圖示並自動換行 */
+        .record-icons { display: flex; gap: 2px; margin-top: auto; padding-bottom: 5px; flex-wrap: wrap; justify-content: center; font-size: 0.8rem; }
         
         .dot { width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
         .dot.food { background-color: var(--tag-food); }
@@ -619,35 +618,31 @@
             }
         }
 
-        // --- 產生行事曆 (深色玻璃浮雕版) ---
+        // --- 產生行事曆 (深色玻璃浮雕版 + 4大類圖示) ---
         function renderCalendar() {
             const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1; // getMonth() 是 0-11
+            const month = currentDate.getMonth() + 1; 
             
             document.getElementById('current-month-year').innerText = `${year}年 ${month}月`;
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
             
-            // 取得該月第一天是星期幾 (0 是週日，改為 7 以配合版面)
             let firstDay = new Date(year, month - 1, 1).getDay();
             if (firstDay === 0) firstDay = 7;
             
             const daysInMonth = new Date(year, month, 0).getDate();
             const today = new Date();
             
-            // 填補月初的空白格子
             for (let i = 1; i < firstDay; i++) {
                 const emptyCell = document.createElement('div');
                 emptyCell.className = 'day-cell empty';
                 grid.appendChild(emptyCell);
             }
             
-            // 填入當月日期
             for (let d = 1; d <= daysInMonth; d++) {
                 const cell = document.createElement('div');
                 cell.className = 'day-cell';
                 
-                // 標示今天
                 if (year === today.getFullYear() && month === today.getMonth() + 1 && d === today.getDate()) {
                     cell.classList.add('today');
                 }
@@ -656,24 +651,28 @@
                 dateNum.innerText = d;
                 cell.appendChild(dateNum);
                 
-                // 檢查該日期是否有紀錄，有的話打上對應顏色的點點
                 const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 if (recordsDB[dateStr] && recordsDB[dateStr].length > 0) {
-                    const dotsContainer = document.createElement('div');
-                    dotsContainer.className = 'record-dots';
+                    const iconsContainer = document.createElement('div');
+                    iconsContainer.className = 'record-icons';
                     
-                    let hasFood = false, hasMedical = false, hasStatus = false;
+                    let hasFood = false, hasInsulin = false, hasMed = false, hasStatus = false;
+                    
+                    // 檢查當天有哪些類別的紀錄
                     recordsDB[dateStr].forEach(r => {
                         if (r.category === 'food' || r.type.includes('餐') || r.type === '點心') hasFood = true;
-                        if (r.category === 'medical' || r.type === '胰島素' || r.type === '吃藥') hasMedical = true;
+                        if (r.type === '胰島素') hasInsulin = true;
+                        if (r.type === '吃藥') hasMed = true;
                         if (r.category === 'status' || r.type === '身體狀況') hasStatus = true;
                     });
                     
-                    if(hasFood) dotsContainer.innerHTML += '<div class="dot food"></div>';
-                    if(hasMedical) dotsContainer.innerHTML += '<div class="dot medical"></div>';
-                    if(hasStatus) dotsContainer.innerHTML += '<div class="dot status"></div>';
+                    // 最多只印出這 4 種代表圖示，確保格子不會被無限拉長
+                    if(hasFood) iconsContainer.innerHTML += '<span>🍽️</span>';
+                    if(hasInsulin) iconsContainer.innerHTML += '<span>💉</span>';
+                    if(hasMed) iconsContainer.innerHTML += '<span>💊</span>';
+                    if(hasStatus) iconsContainer.innerHTML += '<span>🤒</span>';
                     
-                    cell.appendChild(dotsContainer);
+                    cell.appendChild(iconsContainer);
                 }
                 
                 cell.onclick = () => openDetailModal(year, month, d);
