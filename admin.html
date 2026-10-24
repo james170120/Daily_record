@@ -6,26 +6,24 @@
     <title>後台管理 - 媽媽的健康日記</title>
     <style>
         :root {
-            /* 配合新版的柔和溫馨配色 */
             --bg-color: #f4f7f5;
             --panel-bg: #ffffff;
             --text-color: #333333;
             --text-muted: #777777;
-            --primary: #7a945b; /* 柔和綠 */
+            --primary: #7a945b; 
             --primary-hover: #637a48;
-            --accent: #e6aa7a; /* 暖橘色 */
+            --accent: #e6aa7a; 
             --danger: #e07a7a;
             --border: #dcdcdc;
             
-            /* 標籤顏色 */
             --tag-food: #7ab1e0;
             --tag-medical: #e07a7a;
             --tag-status: #e3b341;
+            --tag-error: #ff4d4f; /* 新增：錯誤標籤專用紅色 */
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
         
-        /* --- 登入畫面 --- */
         #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 85vh; }
         .login-box { background: var(--panel-bg); padding: 40px 30px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 380px; text-align: center; }
         .login-box h2 { color: var(--primary); margin-top: 0; margin-bottom: 10px; }
@@ -37,7 +35,6 @@
         button { background: var(--primary); color: white; border: none; padding: 15px 20px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; width: 100%; transition: 0.2s; }
         button:hover { background: var(--primary-hover); }
 
-        /* --- 儀表板畫面 --- */
         #dashboard-screen { display: none; max-width: 1000px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 15px; margin-bottom: 20px; }
         .header h2 { margin: 0; color: var(--primary); }
@@ -46,7 +43,6 @@
         .btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
         .btn-outline:hover { background: #f0f0f0; color: var(--text-color); }
 
-        /* 資料表格 */
         .table-container { background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 5px 15px rgba(0,0,0,0.03); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th, td { padding: 16px 20px; border-bottom: 1px solid var(--border); }
@@ -54,32 +50,27 @@
         tr:last-child td { border-bottom: none; }
         tr:hover { background: #fdfdfd; }
         
-        /* 分類標籤 */
         .tag { padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; display: inline-block; white-space: nowrap; }
         .tag.food { background: rgba(122, 177, 224, 0.15); color: var(--tag-food); border: 1px solid var(--tag-food); }
         .tag.medical { background: rgba(224, 122, 122, 0.15); color: var(--tag-medical); border: 1px solid var(--tag-medical); }
         .tag.status { background: rgba(227, 179, 65, 0.15); color: var(--tag-status); border: 1px solid var(--tag-status); }
+        .tag.error { background: rgba(255, 77, 79, 0.15); color: var(--tag-error); border: 1px solid var(--tag-error); } /* 新增：錯誤樣式 */
 
-        /* 時間樣式 */
         .date-text { font-weight: bold; color: var(--text-color); }
         .time-text { color: var(--accent); font-size: 0.9rem; }
         .period-text { color: var(--text-muted); font-size: 0.9rem; margin-left: 5px; }
-
     </style>
 </head>
 <body>
-
-    <!-- 密碼登入區 -->
     <div id="login-screen">
         <div class="login-box">
             <h2>🪴 系統管理員登入</h2>
             <p>請輸入後台密碼以查看健康數據明細</p>
-            <input type="password" id="admin-pwd" placeholder="請輸入密碼 (測試請打 admin123)" onkeypress="handleEnter(event)">
+            <input type="password" id="admin-pwd" placeholder="請輸入密碼" onkeypress="handleEnter(event)">
             <button onclick="checkLogin()">登入查看</button>
         </div>
     </div>
 
-    <!-- 資料儀表板 -->
     <div id="dashboard-screen">
         <div class="header">
             <h2>媽媽的健康數據總覽</h2>
@@ -88,7 +79,6 @@
                 <button class="btn-outline" onclick="logout()">登出</button>
             </div>
         </div>
-
         <div class="table-container">
             <table>
                 <thead>
@@ -99,28 +89,21 @@
                         <th>詳細內容 / 劑量 / 症狀</th>
                     </tr>
                 </thead>
-                <tbody id="data-table-body">
-                    <!-- 資料將由 JS 動態填入 -->
-                </tbody>
+                <tbody id="data-table-body"></tbody>
             </table>
         </div>
     </div>
 
     <script>
-        function handleEnter(e) {
-            if (e.key === 'Enter') checkLogin();
-        }
+        function handleEnter(e) { if (e.key === 'Enter') checkLogin(); }
 
-        // 簡易前端密碼驗證
         function checkLogin() {
             const pwd = document.getElementById('admin-pwd').value;
             if (pwd === 'admin123') {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('dashboard-screen').style.display = 'block';
-                fetchData(); // 登入成功後抓取資料
-            } else {
-                alert('密碼錯誤！請重新輸入。');
-            }
+                fetchData(); 
+            } else { alert('密碼錯誤！請重新輸入。'); }
         }
 
         function logout() {
@@ -129,19 +112,17 @@
             document.getElementById('login-screen').style.display = 'flex';
         }
 
-        // 將分類代碼轉換為中文標籤與對應樣式
         const catMap = {
             'food': { label: '飲食紀錄', class: 'food' },
             'medical': { label: '醫療紀錄', class: 'medical' },
-            'status': { label: '身體狀況', class: 'status' }
+            'status': { label: '身體狀況', class: 'status' },
+            'error': { label: '系統報錯', class: 'error' } // 新增：錯誤分類
         };
 
-        // 模擬從 Supabase 或 n8n 抓取資料 (改為真實 API 串接)
         async function fetchData() {
             const tbody = document.getElementById('data-table-body');
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 30px; color: #777;">資料載入中...</td></tr>';
             
-            // ★★★ 填入你負責抓取資料的 GET Webhook 網址 ★★★
             const N8N_GET_URL = 'https://orthodox-oarfish.pikapod.net/webhook/get-health-records';
 
             try {
@@ -150,29 +131,28 @@
                 const data = await response.json();
 
                 tbody.innerHTML = '';
-                
                 if(data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: #777;">目前還沒有任何紀錄</td></tr>';
                     return;
                 }
 
-                // 將資料依照日期與時間排序 (最新紀錄排在最上面)
                 data.sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
 
                 data.forEach(row => {
-                    // 防呆：如果舊資料沒有 category，預設給個標籤
                     const catInfo = catMap[row.category] || { label: '未分類', class: 'status' };
                     const periodHtml = row.period ? `<span class="period-text">[${row.period}]</span>` : '';
+                    // 如果是錯誤，把內容文字加粗標紅以便識別
+                    const contentHtml = row.category === 'error' ? `<span style="color: #ff4d4f; font-weight: bold;">${row.content}</span>` : row.content;
                     
                     tbody.innerHTML += `
-                        <tr>
+                        <tr style="${row.category === 'error' ? 'background: #fff1f0;' : ''}">
                             <td>
                                 <div class="date-text">${row.date}</div>
                                 <div class="time-text">${row.time} ${periodHtml}</div>
                             </td>
                             <td><span class="tag ${catInfo.class}">${catInfo.label}</span></td>
                             <td><strong>${row.type}</strong></td>
-                            <td>${row.content}</td>
+                            <td>${contentHtml}</td>
                         </tr>
                     `;
                 });

@@ -302,6 +302,7 @@
                 if(document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
             } catch (error) {
                 console.error("載入資料失敗:", error);
+                sendErrorLog(`讀取失敗: ${error.message}`);
             }
         }
 
@@ -416,6 +417,7 @@
                 }
             } catch (error) {
                 alert('❌ 連線至 n8n 發生錯誤！'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄';
+                sendErrorLog(`讀取失敗: ${error.message}`);
             }
         }
 
