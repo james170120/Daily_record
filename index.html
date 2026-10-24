@@ -256,8 +256,8 @@
 
     <script>
         // ★★★ 請替換成你 n8n 的兩個 Webhook 網址 ★★★
-        const N8N_GET_URL = 'https://替換成你的_GET_Webhook_URL';
-        const N8N_POST_URL = 'https://替換成你的_POST_Webhook_URL';
+        const N8N_GET_URL = 'https://orthodox-oarfish.pikapod.net/webhook/get-health-records';
+        const N8N_POST_URL = 'https://orthodox-oarfish.pikapod.net/webhook/health-record';
 
         let currentRecordType = '';
         let currentInputCategory = ''; 
@@ -533,66 +533,77 @@
 
         function changeMonth(offset) { currentDate.setMonth(currentDate.getMonth() + offset); renderCalendar(); }
 
-        // --- 明細 Modal (群組分類版) ---
+        // --- 明細 Modal (固定分類顯示版) ---
         function openDetailModal(y, m, d) {
             let dateKey = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             document.getElementById('detail-modal-title').innerText = `📅 ${y}/${m}/${d} 明細`;
             
             const records = recordsDB[dateKey] || [];
-            if(records.length === 0) {
-                document.getElementById('detail-content').innerHTML = '<div style="text-align:center; padding: 20px 0; color:var(--text-muted);">當日無紀錄</div>';
-                document.getElementById('detail-modal').style.display = 'flex';
-                return;
-            }
-
-            // 將資料分門別類
-            const groups = { '🌅 早上時段': [], '☀️ 中午時段': [], '☕ 點心時段': [], '🌙 晚上時段': [], '🛏️ 睡前時段': [], '🤒 身體狀況': [] };
-
-            records.forEach(r => {
-                if (r.category === 'status') { groups['🤒 身體狀況'].push(r); return; }
+            
+            // 輔助函數：過濾並格式化該項目的資料
+            const formatItems = (type, isMedical = false) => {
+                const items = records.filter(r => r.type === type);
+                if (items.length === 0) return `<div class="detail-item" style="color:var(--text-muted); font-size: 0.85rem; padding-left: 5px;">無</div>`;
                 
-                let timeGroup = '';
-                if (r.period) {
-                    if (r.period === '早') timeGroup = '🌅 早上時段';
-                    else if (r.period === '中') timeGroup = '☀️ 中午時段';
-                    else if (r.period === '晚') timeGroup = '🌙 晚上時段';
-                    else if (r.period === '睡前') timeGroup = '🛏️ 睡前時段';
-                } else {
-                    // 若無時段(如飲食)，依據時間自動分類
-                    const hour = parseInt(r.time.split(':')[0]);
-                    if (r.type === '點心') timeGroup = '☕ 點心時段';
-                    else if (hour >= 5 && hour < 11) timeGroup = '🌅 早上時段';
-                    else if (hour >= 11 && hour < 14) timeGroup = '☀️ 中午時段';
-                    else if (hour >= 14 && hour < 17) timeGroup = '☕ 點心時段';
-                    else if (hour >= 17 && hour < 21) timeGroup = '🌙 晚上時段';
-                    else timeGroup = '🛏️ 睡前時段';
-                }
-                if(!groups[timeGroup]) groups[timeGroup] = [];
-                groups[timeGroup].push(r);
-            });
-
-            let htmlContent = '';
-            for (const [groupName, items] of Object.entries(groups)) {
-                if (items.length > 0) {
-                    let groupClass = "detail-group";
-                    if (groupName.includes('睡前')) groupClass += " danger";
-                    if (groupName.includes('身體狀況')) groupClass += " warning";
-                    
-                    // 區塊標題
-                    htmlContent += `<div class="${groupClass}"><div class="detail-time-title">${groupName}</div>`;
-                    
-                    // 區塊內容 (依照時間排序)
-                    items.sort((a,b) => a.time.localeCompare(b.time));
-                    items.forEach(item => {
-                        htmlContent += `
-                        <div class="detail-item">
-                            <div style="flex:1;"><b>${item.type}</b>: ${item.content}</div>
+                // 若為醫療紀錄，依照時段排序並加上 [早/中/晚/睡前] 標示
+                if (isMedical) {
+                    const periodOrder = { '早': 1, '中': 2, '晚': 3, '睡前': 4 };
+                    items.sort((a, b) => (periodOrder[a.period] || 99) - (periodOrder[b.period] || 99));
+                    return items.map(item => `
+                        <div class="detail-item" style="padding-left: 5px;">
+                            <div style="flex:1; color: var(--text-color);"><b>[${item.period || '未分類'}]</b> ${item.content}</div>
                             <span class="tag">${item.time}</span>
-                        </div>`;
-                    });
-                    htmlContent += `</div>`;
+                        </div>`).join('');
                 }
-            }
+                
+                // 一般飲食或身體狀況紀錄
+                return items.map(item => `
+                    <div class="detail-item" style="padding-left: 5px;">
+                        <div style="flex:1; color: var(--text-color);">${item.content}</div>
+                        <span class="tag">${item.time}</span>
+                    </div>`).join('');
+            };
+
+            // 組合出固定的分類結構
+            const htmlContent = `
+                <div class="detail-group" style="border-left-color: var(--accent);">
+                    <div class="detail-time-title" style="color: var(--accent);">🍽️ 飲食紀錄</div>
+                    <div style="padding-left:5px; margin-bottom: 5px;">
+                        <div style="font-size:0.85rem; color:#8b949e; margin-top:8px;">🥪 早餐</div>
+                        ${formatItems('早餐')}
+                        
+                        <div style="font-size:0.85rem; color:#8b949e; margin-top:12px;">🍱 午餐</div>
+                        ${formatItems('午餐')}
+                        
+                        <div style="font-size:0.85rem; color:#8b949e; margin-top:12px;">🍲 晚餐</div>
+                        ${formatItems('晚餐')}
+                        
+                        <div style="font-size:0.85rem; color:#8b949e; margin-top:12px;">🍎 點心</div>
+                        ${formatItems('點心')}
+                    </div>
+                </div>
+
+                <div class="detail-group danger">
+                    <div class="detail-time-title" style="color: var(--danger);">💉 胰島素</div>
+                    <div style="padding-left:5px;">
+                        ${formatItems('胰島素', true)}
+                    </div>
+                </div>
+
+                <div class="detail-group" style="border-left-color: var(--primary);">
+                    <div class="detail-time-title" style="color: var(--primary);">💊 吃藥</div>
+                    <div style="padding-left:5px;">
+                        ${formatItems('吃藥', true)}
+                    </div>
+                </div>
+
+                <div class="detail-group warning">
+                    <div class="detail-time-title" style="color: var(--warning);">🤒 身體狀況</div>
+                    <div style="padding-left:5px;">
+                        ${formatItems('身體狀況')}
+                    </div>
+                </div>
+            `;
 
             document.getElementById('detail-content').innerHTML = htmlContent;
             document.getElementById('detail-modal').style.display = 'flex';
