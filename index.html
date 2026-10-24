@@ -6,7 +6,6 @@
     <title>媽媽的健康日記</title>
     <style>
         :root {
-            /* 主程式深色主題保持不變 */
             --bg-color: #121418;
             --panel-bg: #1c2128;
             --text-color: #c9d1d9;
@@ -30,13 +29,13 @@
         /* --- 紀錄頁面 --- */
         .section-title { font-size: 1.1rem; margin-bottom: 15px; color: var(--accent); font-weight: bold; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .grid-full { grid-column: span 2; } /* 讓第三個按鈕橫跨兩格 */
+        .grid-full { grid-column: span 2; } 
 
         button.record-btn { background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border); border-radius: 12px; padding: 20px 10px; font-size: 1.1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.2s; cursor: pointer; box-shadow: 3px 3px 8px rgba(0,0,0,0.4), -1px -1px 4px rgba(255,255,255,0.02); }
         button.record-btn:active { transform: scale(0.95); box-shadow: inset 3px 3px 8px rgba(0,0,0,0.6); border-color: var(--primary); }
         .icon { font-size: 2rem; margin-bottom: 8px; }
 
-        /* --- 2D 養成花園場景 --- */
+        /* --- 盆栽 (單月養成) 場景 --- */
         .game-container { text-align: center; padding: 10px; }
         .game-scene { position: relative; width: 100%; height: 280px; background: linear-gradient(to bottom, #1a2a6c, #11998e 50%, #4CAF50 50%, #2E7D32 100%); border-radius: 16px; border: 2px solid var(--border); overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.5); margin-bottom: 20px; }
         .sky-body { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background: #FFF59D; border-radius: 50%; box-shadow: 0 0 20px #FFF59D, 0 0 40px #FBC02D; }
@@ -45,36 +44,38 @@
         .cloud-2 { width: 60px; height: 20px; top: 80px; right: 80px; }
         .soil-patch { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 140px; height: 50px; background: #5D4037; border-radius: 50%; box-shadow: inset 0 5px 10px rgba(0,0,0,0.4), 0 8px 0 #3E2723, 0 12px 10px rgba(0,0,0,0.6); }
         .plant-avatar { position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); font-size: 6.5rem; filter: drop-shadow(0 15px 10px rgba(0,0,0,0.5)); animation: breath 3s infinite ease-in-out; z-index: 2; }
+        
+        /* --- 大花園 (總收藏) 場景 --- */
+        .garden-landscape { position: relative; width: 100%; height: 60vh; background: linear-gradient(to bottom, #87CEEB, #a8e6cf 40%, #7bca96 60%, #4caf50 100%); border-radius: 16px; border: 2px solid var(--border); overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); }
+        .garden-flower { position: absolute; animation: sway 3s infinite ease-in-out; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.4)); cursor: pointer; }
+
         @keyframes breath { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05) translateY(-5px); } }
+        @keyframes sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+
         .progress-bar { width: 100%; height: 20px; background: #000; border-radius: 10px; overflow: hidden; margin-top: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
         .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00b4db, var(--primary)); box-shadow: 0 0 10px var(--primary-glow); transition: width 0.5s ease-in-out; }
         .stage-info { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; }
 
-        /* --- 全新風格行事曆 (柔和插畫風) --- */
+        /* --- 柔和插畫風行事曆 --- */
         #page-calendar { background-color: #ffffff; color: #333; min-height: 100vh; padding: 0; } 
         .cal-wrapper { padding: 15px; }
-        
         .cal-header-bar { display: flex; justify-content: space-between; align-items: flex-end; padding: 15px 20px 5px 20px; color: white; font-weight: bold; }
         .cal-nav-btn { background: rgba(0,0,0,0.2); color: white; border: none; font-size: 1rem; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
-        
         .cal-month-eng { font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 10px; }
         .cal-decorations { font-size: 1.2rem; }
         .cal-month-tw { font-size: 1.1rem; }
-
         .cal-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 20px; }
         .cal-th { color: white; padding: 8px 0; text-align: center; font-weight: normal; font-size: 1rem; border: 1px solid rgba(0,0,0,0.1); }
-        .cal-td { 
-            border: 1px solid #dcdcdc; height: 75px; vertical-align: top; padding: 4px; 
-            font-size: 0.9rem; font-style: italic; color: #5a7d5a; cursor: pointer; transition: 0.2s;
-        }
+        .cal-td { border: 1px solid #dcdcdc; height: 80px; vertical-align: top; padding: 4px; font-size: 0.9rem; font-style: italic; color: #5a7d5a; cursor: pointer; transition: 0.2s; position: relative; }
         .cal-td:active { opacity: 0.7; }
         
-        /* 日期格子背景狀態 */
         .cal-bg-normal { background-color: #ffffff; }
         .cal-bg-weekend { background-color: #fdf3f3; } 
         .cal-bg-empty { background-color: #dcdcdc; }   
         .cal-bg-today { border: 2px solid #ff9900; box-shadow: inset 0 0 8px rgba(255,153,0,0.3); font-weight: bold; }
         
+        .cal-day-num { display: flex; justify-content: space-between; align-items: center; }
+        .perfect-star { color: #ffeb3b; font-size: 1rem; filter: drop-shadow(0 0 2px rgba(255,215,0,0.8)); font-style: normal; }
         .record-icons { display: flex; flex-wrap: wrap; gap: 2px; font-size: 0.8rem; margin-top: 5px; font-style: normal; }
 
         /* --- 彈出視窗 --- */
@@ -103,21 +104,25 @@
         
         .input-field { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: #000; color: var(--text-color); font-size: 1.1rem; outline: none; }
         .input-field:focus { border-color: var(--primary); box-shadow: 0 0 5px var(--primary-glow); }
-        
         .submit-btn { background: var(--primary); color: #000; border: none; padding: 15px; border-radius: 8px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
         
-        /* 歷史明細 Modal */
+        /* 歷史明細 Modal (分類顯示) */
         .detail-group { background: var(--card-bg); border-radius: 8px; margin-bottom: 12px; padding: 12px; border-left: 4px solid var(--accent); }
         .detail-group.danger { border-left-color: var(--danger); }
+        .detail-group.warning { border-left-color: var(--warning); }
         .detail-time-title { font-size: 0.9rem; color: var(--accent); font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-        .detail-item { font-size: 0.95rem; margin: 8px 0 0 0; color: var(--text-color); display: flex; justify-content: space-between; align-items: center; }
-        .detail-item span.tag { font-size: 0.75rem; background: #2a313c; padding: 3px 8px; border-radius: 6px; color: var(--text-muted); }
+        .detail-group.danger .detail-time-title { color: var(--danger); }
+        .detail-group.warning .detail-time-title { color: var(--warning); }
+        
+        .detail-item { font-size: 0.95rem; margin: 8px 0 0 0; color: var(--text-color); display: flex; justify-content: space-between; align-items: flex-start; }
+        .detail-item span.tag { font-size: 0.75rem; background: #2a313c; padding: 3px 8px; border-radius: 6px; color: var(--text-muted); margin-left: 10px; white-space: nowrap;}
         .close-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 12px; border-radius: 8px; width: 100%; font-size: 1rem; cursor: pointer; margin-top: 10px; }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
-        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        /* --- 底部導覽列 (4 頁籤) --- */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 50; }
+        .nav-item { background: none; border: none; color: var(--text-muted); font-size: 0.85rem; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
         .nav-item.active { color: var(--primary); text-shadow: 0 0 8px var(--primary-glow); }
-        .nav-item .nav-icon { font-size: 1.5rem; margin-bottom: 4px; }
+        .nav-item .nav-icon { font-size: 1.4rem; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -142,10 +147,11 @@
         </div>
     </div>
 
-    <!-- 頁面 2: 2D 養成花園 -->
-    <div id="page-game" class="page">
+    <!-- 頁面 2: 盆栽 (單月進度) -->
+    <div id="page-plant" class="page">
         <div class="game-container">
-            <h2 id="month-garden-title">本月的健康花園</h2>
+            <h2 id="month-garden-title">本月的栽培盆栽</h2>
+            <p style="color: var(--text-muted); font-size:0.9rem; margin-top:-10px;">每天紀錄，盆栽就會慢慢長大喔！</p>
             <div class="game-scene">
                 <div class="sky-body"></div>
                 <div class="cloud cloud-1"></div>
@@ -160,7 +166,19 @@
         </div>
     </div>
 
-    <!-- 頁面 3: 全新主題行事曆 -->
+    <!-- 頁面 3: 大花園 (歷史收藏) -->
+    <div id="page-garden" class="page">
+        <div class="game-container">
+            <h2 style="color: var(--accent);">🌸 我的收藏花園</h2>
+            <p style="color: var(--text-muted); font-size:0.9rem; margin-top:-10px;">只要持續紀錄，你的花園就會越來越豐富！</p>
+            <div class="garden-landscape" id="garden-landscape">
+                <!-- JS 動態生成隨機花朵 -->
+            </div>
+            <p style="margin-top:15px; color:var(--text-muted);">已收集花朵數量: <strong id="total-flowers-count" style="color:var(--accent);">0</strong> 朵</p>
+        </div>
+    </div>
+
+    <!-- 頁面 4: 行事曆 -->
     <div id="page-calendar" class="page">
         <div class="cal-header-bar" id="cal-header-bar">
             <div class="cal-month-eng">
@@ -217,35 +235,35 @@
         </div>
     </div>
 
-    <!-- 歷史明細 Modal -->
+    <!-- 歷史明細 Modal (分類群組) -->
     <div id="detail-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header" id="detail-modal-title">📅 紀錄明細</div>
-            <div id="detail-content" style="color: var(--text-color); font-size:0.95rem; text-align:left; padding: 10px 0;">
-                載入中...
+            <div id="detail-content" style="padding: 10px 0;">
+                <!-- JS 動態填入分類群組 -->
             </div>
             <button class="close-btn" onclick="closeModal('detail-modal')">關閉明細</button>
         </div>
     </div>
 
-    <!-- 底部導覽列 -->
+    <!-- 底部導覽列 (改為 4 頁籤) -->
     <div class="bottom-nav">
         <button class="nav-item active" onclick="switchPage('record', this)"><span class="nav-icon">📝</span><span>紀錄</span></button>
-        <button class="nav-item" onclick="switchPage('game', this)"><span class="nav-icon">🌱</span><span>花園</span></button>
+        <button class="nav-item" onclick="switchPage('plant', this)"><span class="nav-icon">🪴</span><span>盆栽</span></button>
+        <button class="nav-item" onclick="switchPage('garden', this)"><span class="nav-icon">🌸</span><span>花園</span></button>
         <button class="nav-item" onclick="switchPage('calendar', this)"><span class="nav-icon">📅</span><span>日曆</span></button>
     </div>
 
     <script>
         // ★★★ 請替換成你 n8n 的兩個 Webhook 網址 ★★★
-        const N8N_GET_URL = 'https://orthodox-oarfish.pikapod.net/webhook/get-health-records';   // 負責抓取資料 (Get many rows)
-        const N8N_POST_URL = 'https://orthodox-oarfish.pikapod.net/webhook/health-record'; // 負責寫入資料 (Create a row)
+        const N8N_GET_URL = 'https://替換成你的_GET_Webhook_URL';
+        const N8N_POST_URL = 'https://替換成你的_POST_Webhook_URL';
 
         let currentRecordType = '';
         let currentInputCategory = ''; 
         let selectedTimePeriod = ''; 
         let editingRecordId = null; 
         let currentDate = new Date(); 
-        
         let recordsDB = {};
 
         const monthlyThemes = [
@@ -257,40 +275,37 @@
             { bg: '#f1b8c4', headerBg: '#d69ca9', icons: '🍂🐿️🍁' }, { bg: '#91bf97', headerBg: '#73a17a', icons: '🎄🎅🎁' }
         ];
 
-        function getFormattedDate(dateObj) { return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`; }
-
+        const startYear = 2026;
+        const fiveYearPlants = ['🌸','🌻','🌷','🌼','🌺','🌹','🪷','🏵️','💮','💐','🍁','🍄','🌵','🌴','🌲','🌳','🌿','🍀','🪴','🎍','🍃','🍂','🌾','🪹'];
         const iconMap = { '早餐':'🥪', '午餐':'🍱', '晚餐':'🍲', '點心':'🍎', '胰島素':'💉', '吃藥':'💊', '身體狀況':'🤒' };
         const monthNamesEng = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // --- 網頁載入時自動從資料庫抓取歷史資料 (升級版) ---
+        function getFormattedDate(dateObj) { return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`; }
+
+        // --- 載入資料 ---
         async function loadData() {
             try {
-                // 在網址後方加上時間戳，強制瀏覽器抓取最新資料，不使用舊快取
                 const fetchUrl = N8N_GET_URL + "?t=" + new Date().getTime();
                 const response = await fetch(fetchUrl);
-                
                 if (!response.ok) throw new Error("網路回應異常");
                 const data = await response.json();
                 
                 recordsDB = {};
                 data.forEach(item => {
-                    // 確保日期格式正確：只取 YYYY-MM-DD 前 10 個字元
                     const cleanDate = item.date.substring(0, 10);
-                    
                     if(!recordsDB[cleanDate]) recordsDB[cleanDate] = [];
                     recordsDB[cleanDate].push(item);
                 });
                 
-                updateGameLogic();
-                if(document.getElementById('page-calendar').classList.contains('active')) {
-                    renderCalendar();
-                }
+                updatePlantLogic();
+                updateGardenLandscape();
+                if(document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
             } catch (error) {
                 console.error("載入資料失敗:", error);
-                alert("⚠️ 歷史紀錄讀取失敗！請檢查 n8n 的 GET 網址是否正確，或確認 CORS 已開啟。");
             }
         }
 
+        // --- 頁面切換 ---
         function switchPage(pageId, btnElement) {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             document.getElementById('page-' + pageId).classList.add('active');
@@ -302,13 +317,14 @@
                 renderCalendar();
             } else {
                 document.getElementById('header-title').style.display = 'block';
-                if(pageId === 'game') updateGameLogic();
+                if(pageId === 'plant') updatePlantLogic();
+                if(pageId === 'garden') updateGardenLandscape();
             }
         }
 
+        // --- 輸入與修改邏輯 ---
         function openInputModal(type, category) {
-            currentRecordType = type; currentInputCategory = category; 
-            selectedTimePeriod = ''; editingRecordId = null; 
+            currentRecordType = type; currentInputCategory = category; selectedTimePeriod = ''; editingRecordId = null; 
             
             document.getElementById('input-modal-title').innerText = `📝 紀錄 ${type}`;
             const inputField = document.getElementById('record-input');
@@ -318,10 +334,7 @@
             
             const now = new Date();
             timePicker.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-            inputField.value = ''; 
-            
-            submitBtn.innerText = '💾 儲存新紀錄';
-            submitBtn.style.backgroundColor = 'var(--primary)';
+            inputField.value = ''; submitBtn.innerText = '💾 儲存新紀錄'; submitBtn.style.backgroundColor = 'var(--primary)';
             document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('selected'));
 
             if (category === 'medical') {
@@ -330,12 +343,10 @@
                 inputField.placeholder = type === '胰島素' ? '請輸入劑量數字...' : '請輸入藥品名稱...';
             } else if (category === 'status') {
                 timeSelector.style.display = 'none';
-                inputField.type = 'text';
-                inputField.placeholder = '請描述狀況 (如:拉肚子、頭暈)...';
+                inputField.type = 'text'; inputField.placeholder = '請描述狀況 (如:拉肚子、頭暈)...';
             } else {
                 timeSelector.style.display = 'none';
-                inputField.type = 'text';
-                inputField.placeholder = `請輸入${type}吃了什麼...`;
+                inputField.type = 'text'; inputField.placeholder = `請輸入${type}吃了什麼...`;
             }
 
             renderHistoryList(type);
@@ -344,15 +355,12 @@
 
         function renderHistoryList(type) {
             const todayKey = getFormattedDate(new Date());
-            const todayRecords = recordsDB[todayKey] || [];
-            const typeRecords = todayRecords.filter(r => r.type === type);
-            
-            const historyContainer = document.getElementById('history-container');
-            const historyList = document.getElementById('history-list');
+            const typeRecords = (recordsDB[todayKey] || []).filter(r => r.type === type);
+            const container = document.getElementById('history-container');
             
             if (typeRecords.length > 0) {
-                historyContainer.style.display = 'block';
-                historyList.innerHTML = typeRecords.map(r => `
+                container.style.display = 'block';
+                document.getElementById('history-list').innerHTML = typeRecords.map(r => `
                     <div class="history-item">
                         <div class="history-info">
                             <span class="history-time">${r.time} ${r.period ? '[' + r.period + ']' : ''}</span>
@@ -361,175 +369,236 @@
                         <button class="edit-btn" onclick="startEdit(${r.id})">修改</button>
                     </div>
                 `).join('');
-            } else {
-                historyContainer.style.display = 'none';
-            }
+            } else { container.style.display = 'none'; }
         }
 
         function startEdit(id) {
             const todayKey = getFormattedDate(new Date());
             const recordToEdit = recordsDB[todayKey].find(r => r.id === id);
-            
             if (recordToEdit) {
                 editingRecordId = id;
                 document.getElementById('record-input').value = recordToEdit.content;
                 document.getElementById('record-time').value = recordToEdit.time; 
-                
                 if (currentInputCategory === 'medical' && recordToEdit.period) {
-                    document.querySelectorAll('.time-btn').forEach(btn => {
-                        if(btn.innerText === recordToEdit.period) selectTime(btn, recordToEdit.period);
-                    });
+                    document.querySelectorAll('.time-btn').forEach(btn => { if(btn.innerText === recordToEdit.period) selectTime(btn, recordToEdit.period); });
                 }
-                
-                const submitBtn = document.getElementById('submit-btn');
-                submitBtn.innerText = '🔄 更新紀錄';
-                submitBtn.style.backgroundColor = 'var(--accent)';
+                const btn = document.getElementById('submit-btn');
+                btn.innerText = '🔄 更新紀錄'; btn.style.backgroundColor = 'var(--accent)';
             }
         }
 
         function selectTime(btn, period) {
             document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedTimePeriod = period;
+            btn.classList.add('selected'); selectedTimePeriod = period;
         }
 
         async function submitRecord() {
             const val = document.getElementById('record-input').value;
             const chosenTime = document.getElementById('record-time').value;
-            
             if (currentInputCategory === 'medical' && !selectedTimePeriod) { alert('請選擇時段！'); return; }
             if (!val || !chosenTime) { alert('時間與內容不能為空！'); return; }
             
             const payload = {
-                date: getFormattedDate(new Date()),
-                time: chosenTime,
+                date: getFormattedDate(new Date()), time: chosenTime,
                 period: currentInputCategory === 'medical' ? selectedTimePeriod : '',
-                type: currentRecordType,
-                content: val,
-                category: currentInputCategory
+                type: currentRecordType, content: val, category: currentInputCategory
             };
+            if(editingRecordId !== null) payload.id = editingRecordId; // 傳送 ID 供未來 Upsert 使用
 
             document.getElementById('submit-btn').innerText = '儲存中...';
-
             try {
-                // 使用 POST URL 寫入資料
-                const response = await fetch(N8N_POST_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
+                const response = await fetch(N8N_POST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (response.ok) {
                     alert(`✅ 成功新增/更新紀錄於 ${chosenTime}`);
-                    loadData(); // 成功後重新抓取資料以刷新畫面
-                    closeModal('input-modal');
+                    loadData(); closeModal('input-modal');
                 } else {
-                    alert('❌ 上傳失敗，請檢查網路狀態。');
-                    document.getElementById('submit-btn').innerText = '💾 儲存紀錄';
+                    alert('❌ 上傳失敗，請檢查網路狀態。'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄';
                 }
             } catch (error) {
-                console.error("Error:", error);
-                alert('❌ 連線至 n8n 發生錯誤！');
-                document.getElementById('submit-btn').innerText = '💾 儲存紀錄';
+                alert('❌ 連線至 n8n 發生錯誤！'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄';
             }
         }
 
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
 
-        // --- 花園邏輯 ---
-        function updateGameLogic() {
+        // --- 盆栽邏輯 (單月) ---
+        function updatePlantLogic() {
             const year = currentDate.getFullYear();
             const monthIndex = currentDate.getMonth(); 
             const currentMonthPrefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
             const daysLogged = Object.keys(recordsDB).filter(key => key.startsWith(currentMonthPrefix)).length;
             
+            let index = ((year - startYear) * 12) + monthIndex;
+            const currentFlower = fiveYearPlants[Math.max(0, index) % fiveYearPlants.length];
+
+            document.getElementById('month-garden-title').innerText = `${monthIndex + 1}月的栽培盆栽`;
             document.getElementById('recorded-days').innerText = daysLogged;
             document.getElementById('game-progress').style.width = `${Math.min((daysLogged / 20) * 100, 100)}%`;
+
+            const avatar = document.getElementById('plant-avatar');
+            const text = document.getElementById('plant-stage-text');
+            if (daysLogged >= 20) { avatar.innerText = currentFlower; text.innerText = `階段 4: 綻放的 ${currentFlower}`; } 
+            else if (daysLogged >= 12) { avatar.innerText = '🌿'; text.innerText = "階段 3: 茂盛的綠葉"; } 
+            else if (daysLogged >= 5) { avatar.innerText = '🌱'; text.innerText = "階段 2: 努力發芽中"; } 
+            else { avatar.innerText = '🌰'; text.innerText = "階段 1: 沉睡的種子"; }
         }
 
-        // --- 動態主題行事曆邏輯 ---
-        function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const minguoYear = year - 1911;
-            const theme = monthlyThemes[month];
+        // --- 大花園邏輯 (總收藏, 隨機分布最多20朵) ---
+        function updateGardenLandscape() {
+            const totalDaysLogged = Object.keys(recordsDB).length;
+            // 每記錄1天就多1朵花(最高20朵) 或是你可以改為 /5, /20
+            const flowerCount = Math.min(20, totalDaysLogged); 
+            
+            document.getElementById('total-flowers-count').innerText = flowerCount;
+            const gardenArea = document.getElementById('garden-landscape');
+            gardenArea.innerHTML = ''; // 清空重新生成
+            
+            for(let i = 0; i < flowerCount; i++) {
+                // 隨機選一種植物
+                const flowerEmoji = fiveYearPlants[Math.floor(Math.random() * fiveYearPlants.length)];
+                // 隨機位置 (避免太靠近邊緣)
+                const top = 10 + Math.random() * 65; // 10% ~ 75%
+                const left = 5 + Math.random() * 80; // 5% ~ 85%
+                const size = 1.5 + Math.random() * 1.5; // 1.5rem ~ 3rem
+                const delay = Math.random() * 2; // 動畫延遲
+                
+                const span = document.createElement('span');
+                span.className = 'garden-flower';
+                span.innerText = flowerEmoji;
+                span.style.top = top + '%';
+                span.style.left = left + '%';
+                span.style.fontSize = size + 'rem';
+                span.style.animationDelay = delay + 's';
+                span.style.zIndex = Math.floor(top); // 越下方層級越高
+                
+                gardenArea.appendChild(span);
+            }
+        }
 
+        // --- 動態主題行事曆邏輯 (包含星星判定) ---
+        function renderCalendar() {
+            const year = currentDate.getFullYear(); const month = currentDate.getMonth(); const theme = monthlyThemes[month];
             document.getElementById('cal-header-bar').style.backgroundColor = theme.bg;
             document.getElementById('cal-weekday-row').style.backgroundColor = theme.headerBg;
             document.getElementById('cal-decorations').innerText = theme.icons;
             document.getElementById('cal-month-text').innerText = `${monthNamesEng[month]} ${year}`;
-            document.getElementById('cal-minguo-text').innerText = `${minguoYear} 年 ${month + 1} 月`;
+            document.getElementById('cal-minguo-text').innerText = `${year - 1911} 年 ${month + 1} 月`;
 
-            const tbody = document.getElementById('cal-tbody');
-            tbody.innerHTML = '';
-
-            let firstDay = new Date(year, month, 1).getDay();
-            if (firstDay === 0) firstDay = 7; 
+            let firstDay = new Date(year, month, 1).getDay(); if (firstDay === 0) firstDay = 7; 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            const today = new Date();
-            let dateCounter = 1;
-            let rowHtml = '';
+            const tbody = document.getElementById('cal-tbody'); tbody.innerHTML = '';
+            const today = new Date(); let dateCounter = 1; let rowHtml = '';
 
             for (let row = 0; row < 6; row++) {
                 rowHtml += '<tr>';
                 for (let col = 1; col <= 7; col++) { 
-                    if (row === 0 && col < firstDay) {
-                        rowHtml += `<td class="cal-td cal-bg-empty"></td>`;
-                    } else if (dateCounter > daysInMonth) {
+                    if (row === 0 && col < firstDay || dateCounter > daysInMonth) {
                         rowHtml += `<td class="cal-td cal-bg-empty"></td>`;
                     } else {
                         let isWeekend = (col === 6 || col === 7);
                         let dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(dateCounter).padStart(2, '0')}`;
-                        
                         let cellClass = isWeekend ? 'cal-bg-weekend' : 'cal-bg-normal';
-                        if (year === today.getFullYear() && month === today.getMonth() && dateCounter === today.getDate()) {
-                            cellClass += ' cal-bg-today';
-                        }
+                        if (year === today.getFullYear() && month === today.getMonth() && dateCounter === today.getDate()) cellClass += ' cal-bg-today';
 
                         let dayRecords = recordsDB[dateKey] || [];
-                        let iconsHtml = '';
+                        let iconsHtml = ''; let starHtml = '';
+                        
                         if (dayRecords.length > 0) {
-                            let uniqueIcons = new Set(dayRecords.map(r => iconMap[r.type]));
+                            let uniqueIcons = new Set();
+                            let hasFood = false, hasInsulin = false, hasMed = false;
+                            
+                            dayRecords.forEach(r => {
+                                uniqueIcons.add(iconMap[r.type] || '');
+                                if (r.category === 'food') hasFood = true;
+                                if (r.type === '胰島素') hasInsulin = true;
+                                if (r.type === '吃藥') hasMed = true;
+                            });
                             iconsHtml = Array.from(uniqueIcons).join('');
+                            // 若同時包含 進食、胰島素、吃藥，給予星星徽章
+                            if (hasFood && hasInsulin && hasMed) starHtml = '<span class="perfect-star">⭐</span>';
                         }
 
                         rowHtml += `
                             <td class="cal-td ${cellClass}" onclick="openDetailModal('${year}', '${month+1}', '${dateCounter}')">
-                                ${dateCounter}
+                                <div class="cal-day-num">${dateCounter} ${starHtml}</div>
                                 <div class="record-icons">${iconsHtml}</div>
                             </td>`;
                         dateCounter++;
                     }
                 }
-                rowHtml += '</tr>';
-                if (dateCounter > daysInMonth && row >= 4) break;
+                rowHtml += '</tr>'; if (dateCounter > daysInMonth && row >= 4) break;
             }
             tbody.innerHTML = rowHtml;
         }
 
-        function changeMonth(offset) {
-            currentDate.setMonth(currentDate.getMonth() + offset);
-            renderCalendar();
-        }
+        function changeMonth(offset) { currentDate.setMonth(currentDate.getMonth() + offset); renderCalendar(); }
 
+        // --- 明細 Modal (群組分類版) ---
         function openDetailModal(y, m, d) {
             let dateKey = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             document.getElementById('detail-modal-title').innerText = `📅 ${y}/${m}/${d} 明細`;
             
             const records = recordsDB[dateKey] || [];
-            let htmlContent = records.length ? records.map(r => 
-                `<div style="margin-bottom:12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid var(--accent);">
-                    <div style="font-size:0.8rem; color:var(--accent); margin-bottom:4px;">[${r.time}] ${r.period ? r.period : ''}</div>
-                    <div><b>${r.type}</b>: ${r.content}</div>
-                </div>`
-            ).join('') : '<div style="text-align:center; padding: 20px 0;">當日無紀錄</div>';
-            
+            if(records.length === 0) {
+                document.getElementById('detail-content').innerHTML = '<div style="text-align:center; padding: 20px 0; color:var(--text-muted);">當日無紀錄</div>';
+                document.getElementById('detail-modal').style.display = 'flex';
+                return;
+            }
+
+            // 將資料分門別類
+            const groups = { '🌅 早上時段': [], '☀️ 中午時段': [], '☕ 點心時段': [], '🌙 晚上時段': [], '🛏️ 睡前時段': [], '🤒 身體狀況': [] };
+
+            records.forEach(r => {
+                if (r.category === 'status') { groups['🤒 身體狀況'].push(r); return; }
+                
+                let timeGroup = '';
+                if (r.period) {
+                    if (r.period === '早') timeGroup = '🌅 早上時段';
+                    else if (r.period === '中') timeGroup = '☀️ 中午時段';
+                    else if (r.period === '晚') timeGroup = '🌙 晚上時段';
+                    else if (r.period === '睡前') timeGroup = '🛏️ 睡前時段';
+                } else {
+                    // 若無時段(如飲食)，依據時間自動分類
+                    const hour = parseInt(r.time.split(':')[0]);
+                    if (r.type === '點心') timeGroup = '☕ 點心時段';
+                    else if (hour >= 5 && hour < 11) timeGroup = '🌅 早上時段';
+                    else if (hour >= 11 && hour < 14) timeGroup = '☀️ 中午時段';
+                    else if (hour >= 14 && hour < 17) timeGroup = '☕ 點心時段';
+                    else if (hour >= 17 && hour < 21) timeGroup = '🌙 晚上時段';
+                    else timeGroup = '🛏️ 睡前時段';
+                }
+                if(!groups[timeGroup]) groups[timeGroup] = [];
+                groups[timeGroup].push(r);
+            });
+
+            let htmlContent = '';
+            for (const [groupName, items] of Object.entries(groups)) {
+                if (items.length > 0) {
+                    let groupClass = "detail-group";
+                    if (groupName.includes('睡前')) groupClass += " danger";
+                    if (groupName.includes('身體狀況')) groupClass += " warning";
+                    
+                    // 區塊標題
+                    htmlContent += `<div class="${groupClass}"><div class="detail-time-title">${groupName}</div>`;
+                    
+                    // 區塊內容 (依照時間排序)
+                    items.sort((a,b) => a.time.localeCompare(b.time));
+                    items.forEach(item => {
+                        htmlContent += `
+                        <div class="detail-item">
+                            <div style="flex:1;"><b>${item.type}</b>: ${item.content}</div>
+                            <span class="tag">${item.time}</span>
+                        </div>`;
+                    });
+                    htmlContent += `</div>`;
+                }
+            }
+
             document.getElementById('detail-content').innerHTML = htmlContent;
             document.getElementById('detail-modal').style.display = 'flex';
         }
 
-        // 網頁載入時啟動資料抓取
+        // 啟動載入
         loadData();
     </script>
 </body>
