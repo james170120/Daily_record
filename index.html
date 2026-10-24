@@ -262,24 +262,32 @@
         const iconMap = { '早餐':'🥪', '午餐':'🍱', '晚餐':'🍲', '點心':'🍎', '胰島素':'💉', '吃藥':'💊', '身體狀況':'🤒' };
         const monthNamesEng = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // --- 網頁載入時自動從資料庫抓取歷史資料 ---
+        // --- 網頁載入時自動從資料庫抓取歷史資料 (升級版) ---
         async function loadData() {
             try {
-                // 使用 GET URL 抓取資料
-                const response = await fetch(N8N_GET_URL);
+                // 在網址後方加上時間戳，強制瀏覽器抓取最新資料，不使用舊快取
+                const fetchUrl = N8N_GET_URL + "?t=" + new Date().getTime();
+                const response = await fetch(fetchUrl);
+                
                 if (!response.ok) throw new Error("網路回應異常");
                 const data = await response.json();
                 
                 recordsDB = {};
                 data.forEach(item => {
-                    if(!recordsDB[item.date]) recordsDB[item.date] = [];
-                    recordsDB[item.date].push(item);
+                    // 確保日期格式正確：只取 YYYY-MM-DD 前 10 個字元
+                    const cleanDate = item.date.substring(0, 10);
+                    
+                    if(!recordsDB[cleanDate]) recordsDB[cleanDate] = [];
+                    recordsDB[cleanDate].push(item);
                 });
                 
                 updateGameLogic();
-                if(document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
+                if(document.getElementById('page-calendar').classList.contains('active')) {
+                    renderCalendar();
+                }
             } catch (error) {
                 console.error("載入資料失敗:", error);
+                alert("⚠️ 歷史紀錄讀取失敗！請檢查 n8n 的 GET 網址是否正確，或確認 CORS 已開啟。");
             }
         }
 
