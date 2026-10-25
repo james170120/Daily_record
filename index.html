@@ -342,9 +342,13 @@
         /* 視窗共用區塊設計 */
         .section-title { font-size: 1.1rem; margin-bottom: 15px; color: var(--accent); font-weight: bold; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        /* 🌟 新增 3 欄式網格，給飲食與喝水專用 🌟 */
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
         .grid-full { grid-column: span 2; } 
-        button.record-btn { background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border); border-radius: 12px; padding: 20px 10px; font-size: 1.1rem; display: flex; flex-direction: column; align-items: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
-        .icon { font-size: 2rem; margin-bottom: 8px; }
+        /* 🌟 按鈕整體縮小約 30% (padding 與字體調小) 🌟 */
+        button.record-btn { background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border); border-radius: 12px; padding: 14px 5px; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        /* 🌟 內部 Emoji 圖示也等比例縮小 🌟 */
+        .icon { font-size: 1.5rem; margin-bottom: 5px; }
 
         /* 盆栽畫面 (配合亮色系調整配色) */
         .game-container { text-align: center; background: var(--panel-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
@@ -417,13 +421,15 @@
     <!-- 紀錄視窗 -->
     <div id="page-record" class="overlay-page">
         <div class="back-to-game-btn" onclick="closeOverlay('page-record')">✖ 返回花園</div>
-        <!-- 🌟 加上 ID 讓 JS 可以動態修改顯示的日期 🌟 -->
-        <div class="section-title" id="record-page-title-food">🍽️ 飲食紀錄 (今日)</div>
-        <div class="grid-2">
+        
+        <!-- 🌟 將標題改為飲食與喝水，並換上 grid-3 🌟 -->
+        <div class="section-title" id="record-page-title-food">🍽️ 飲食與喝水 (今日)</div>
+        <div class="grid-3">
             <button class="record-btn" onclick="openInputModal('早餐', 'food')"><span class="icon">🥪</span>早餐</button>
             <button class="record-btn" onclick="openInputModal('午餐', 'food')"><span class="icon">🍱</span>午餐</button>
             <button class="record-btn" onclick="openInputModal('晚餐', 'food')"><span class="icon">🍲</span>晚餐</button>
             <button class="record-btn" onclick="openInputModal('點心', 'food')"><span class="icon">🍎</span>點心</button>
+            <button class="record-btn" onclick="openInputModal('喝水', 'water')" style="border-bottom: 3px solid #3498db;"><span class="icon">💧</span>喝水</button>
         </div>
         <!-- 🌟 加上 ID 讓 JS 可以動態修改顯示的日期 🌟 -->
         <div class="section-title" id="record-page-title-med">🏥 醫療與身體狀況 (今日)</div>
@@ -937,6 +943,9 @@
                 timeSelector.style.display = 'flex'; inputField.type = type === '胰島素' ? 'number' : 'text'; inputField.placeholder = type === '胰島素' ? '輸入劑量...' : '藥品名稱...';
             } else if (category === 'status') {
                 timeSelector.style.display = 'none'; inputField.type = 'text'; inputField.placeholder = '描述狀況...';
+            } else if (category === 'water') {
+                // 🌟 喝水專用：不需要選時段，直接跳出數字鍵盤 🌟
+                timeSelector.style.display = 'none'; inputField.type = 'number'; inputField.placeholder = '輸入喝水量 (ml)...';
             } else {
                 timeSelector.style.display = 'none'; inputField.type = 'text'; inputField.placeholder = `輸入${type}吃了什麼...`;
             }
@@ -1091,9 +1100,9 @@
                 const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 if (recordsDB[dateStr] && recordsDB[dateStr].length > 0) {
                     const iconsCon = document.createElement('div'); iconsCon.className = 'record-icons';
-                    let hFood = false, hIns = false, hMed = false, hStat = false;
-                    recordsDB[dateStr].forEach(r => { if (r.category === 'food') hFood=true; if(r.type==='胰島素') hIns=true; if(r.type==='吃藥') hMed=true; if(r.category==='status') hStat=true; });
-                    if(hFood) iconsCon.innerHTML += '<span>🍽️</span>'; if(hIns) iconsCon.innerHTML += '<span>💉</span>'; if(hMed) iconsCon.innerHTML += '<span>💊</span>'; if(hStat) iconsCon.innerHTML += '<span>🤒</span>';
+                    let hFood = false, hIns = false, hMed = false, hStat = false, hWater = false;
+                    recordsDB[dateStr].forEach(r => { if (r.category === 'food') hFood=true; if(r.type==='胰島素') hIns=true; if(r.type==='吃藥') hMed=true; if(r.category==='status') hStat=true; if(r.type==='喝水') hWater=true; });
+                    if(hFood) iconsCon.innerHTML += '<span>🍽️</span>'; if(hIns) iconsCon.innerHTML += '<span>💉</span>'; if(hMed) iconsCon.innerHTML += '<span>💊</span>'; if(hStat) iconsCon.innerHTML += '<span>🤒</span>'; if(hWater) iconsCon.innerHTML += '<span>💧</span>';
                     cell.appendChild(iconsCon);
                 }
                 cell.onclick = () => openDetailModal(year, month, d);
@@ -1114,8 +1123,19 @@
                 return items.map(i => `<div class="detail-item" style="padding-left: 5px;"><div style="flex:1; color:var(--text-color);">${isMed?'<b>['+(i.period||'未分類')+']</b> ':''}${i.content}</div><span class="tag">${i.time}</span></div>`).join('');
             };
             
+            // 🌟 獨立計算當日喝水總量 🌟
+            let totalWater = 0;
+            records.filter(r => r.type === '喝水').forEach(r => { totalWater += (parseInt(r.content) || 0); });
+            
             document.getElementById('detail-content').innerHTML = `
                 <div class="detail-group" style="border-left-color: var(--accent);"><div class="detail-time-title">🍽️ 飲食</div><div style="padding-left:5px;"><div style="font-size:0.85rem; color:var(--text-muted);">🥪 早餐</div>${fmt('早餐')}<div style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">🍱 午餐</div>${fmt('午餐')}<div style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">🍲 晚餐</div>${fmt('晚餐')}<div style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">🍎 點心</div>${fmt('點心')}</div></div>
+                
+                <!-- 🌟 喝水專屬區塊 (標題顯示今日總計) 🌟 -->
+                <div class="detail-group" style="border-left-color: #3498db;">
+                    <div class="detail-time-title">💧 喝水紀錄 (今日總計: ${totalWater} ml)</div>
+                    <div style="padding-left:5px;">${fmt('喝水')}</div>
+                </div>
+
                 <div class="detail-group danger"><div class="detail-time-title">💉 胰島素</div><div style="padding-left:5px;">${fmt('胰島素', true)}</div></div>
                 <div class="detail-group" style="border-left-color: var(--primary);"><div class="detail-time-title">💊 吃藥</div><div style="padding-left:5px;">${fmt('吃藥', true)}</div></div>
                 <div class="detail-group warning"><div class="detail-time-title">🤒 身體狀況</div><div style="padding-left:5px;">${fmt('身體狀況')}</div></div>
@@ -1123,7 +1143,6 @@
                 <button class="submit-btn" onclick="closeModal('detail-modal'); closeOverlay('page-calendar'); openRecordPage('${dateKey}')" style="width:100%; margin-top:20px; padding:15px; box-sizing:border-box;">➕ 補登 ${dateKey} 紀錄</button>
             `;
             
-            // 🌟 就是這行剛剛不小心被刪掉了，要把彈窗的 display 設為 flex 才會顯示出來 🌟
             document.getElementById('detail-modal').style.display = 'flex';
         }
 
