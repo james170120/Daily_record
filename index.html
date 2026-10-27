@@ -945,23 +945,45 @@
                 floor.appendChild(grass);
             }
 
-            // 5. 加入 2隻蜜蜂 與 2隻蝴蝶
+            // 5. 🌟 獎勵機制：根據近 3 天的喝水與步數，動態產生蝴蝶與蜜蜂 🌟
             const wrapper = document.getElementById('garden-floor-wrapper');
-            // 清除之前的昆蟲避免重複疊加
             wrapper.querySelectorAll('.flying-insect').forEach(el => el.remove());
+            
+            let rewardBugs = [];
+            const todayStr = getFormattedDate(new Date());
+            const todayDt = new Date(todayStr + "T00:00:00");
 
-            const bugs = ['🐝', '🦋', '🐝', '🦋'];
-            bugs.forEach((bug, index) => {
+            // 掃描歷史紀錄，計算每天的喝水與步數
+            Object.keys(recordsDB).forEach(dateStr => {
+                const recordDt = new Date(dateStr + "T00:00:00");
+                const diffDays = Math.floor((todayDt - recordDt) / (1000 * 60 * 60 * 24));
+                
+                // 只看「今天、昨天、前天」這 3 天的紀錄
+                if (diffDays >= 0 && diffDays < 3) {
+                    let totalWater = 0;
+                    let stepRecords = [];
+                    recordsDB[dateStr].forEach(r => {
+                        if (r.type === '喝水') totalWater += (parseInt(r.content) || 0);
+                        if (r.type === '步數') stepRecords.push(parseInt(r.content) || 0);
+                    });
+                    const maxSteps = stepRecords.length > 0 ? Math.max(...stepRecords) : 0;
+                    
+                    // 達成目標，發放獎勵昆蟲 (可持續存在 3 天)
+                    if (totalWater >= 1500) rewardBugs.push('🦋');
+                    if (maxSteps >= 3000) rewardBugs.push('🐝');
+                }
+            });
+
+            // 如果都沒達成，為了畫面豐富度，保底給 1 隻蜜蜂
+            if (rewardBugs.length === 0) rewardBugs.push('🐝');
+
+            // 將獲得的昆蟲渲染到畫面上
+            rewardBugs.forEach((bug, index) => {
                 const insect = document.createElement('div');
                 insect.innerText = bug;
-                // 一半往右飛，一半往左飛
                 insect.className = index % 2 === 0 ? 'flying-insect' : 'flying-insect fly-reverse';
-                
-                // 讓牠們隨機分布在畫面中下方的高度
-                insect.style.top = (40 + Math.random() * 40) + '%';
-                // 打亂牠們出現的時間，才不會並排一起飛
+                insect.style.top = (35 + Math.random() * 45) + '%';
                 insect.style.animationDelay = '-' + (Math.random() * 20) + 's';
-                
                 wrapper.appendChild(insect);
             });
         }
@@ -1036,11 +1058,50 @@
             try {
                 const response = await fetch(N8N_POST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (response.ok) { 
-                    loadData(); 
+                    await loadData(); // 確保重新讀取最新總和
                     closeModal('input-modal'); 
-                    // 🌟 隨機鼓勵語錄與彈出精美視窗 🌟
-                    const msgs = ["太棒了！每一筆紀錄都是愛自己的證明。", "持之以恆，健康的花園會越開越美麗！", "很棒的紀錄！今天的你也辛苦了。", "又完成了一次紀錄，離健康目標更近一步囉！", "超讚！植物們因為你的努力而開心地生長著。"];
-                    document.getElementById('success-message').innerText = msgs[Math.floor(Math.random() * msgs.length)];
+                    
+                    // 🌟 結算該日期的總喝水量與最高步數 🌟
+                    const typeRecords = recordsDB[targetRecordDate] || [];
+                    let totalWater = 0;
+                    let stepRecords = [];
+                    typeRecords.forEach(r => {
+                        if (r.type === '喝水') totalWater += (parseInt(r.content) || 0);
+                        if (r.type === '步數') stepRecords.push(parseInt(r.content) || 0);
+                    });
+                    let maxSteps = stepRecords.length > 0 ? Math.max(...stepRecords) : 0;
+                    
+                    let customMsg = "太棒了！每一筆紀錄都是愛自己的證明。";
+                    const isToday = targetRecordDate === getFormattedDate(new Date());
+
+                    // 針對喝水與步數給予專屬提示
+                    if (currentRecordType === '喝水') {
+                        if (totalWater >= 1500) {
+                            customMsg = `太棒了！目標達成！\n本日喝水已達 ${totalWater} ml，為花園吸引了一隻美麗的蝴蝶 🦋！`;
+                        } else if (totalWater >= 1000) {
+                            customMsg = `已經喝了 ${totalWater} ml 囉！\n再喝一點點就能吸引蝴蝶來訪了，繼續加油 💧！`;
+                        } else {
+                            customMsg = "喝水紀錄成功！保持水分充足，植物跟妳都會水噹噹喔！";
+                        }
+                    } else if (currentRecordType === '步數') {
+                        if (maxSteps >= 3000) {
+                            customMsg = `太厲害了！目標達成！\n本日步數已達 ${maxSteps} 步，為花園吸引了一隻勤勞的蜜蜂 🐝！`;
+                        } else if (maxSteps >= 1500) {
+                            customMsg = `已經走了 ${maxSteps} 步囉！\n再走一段路就能吸引蜜蜂來採蜜了，繼續加油 👣！`;
+                        } else {
+                            customMsg = "步數紀錄成功！多走動對身體很好喔，繼續保持！";
+                        }
+                    } else {
+                        const msgs = ["太棒了！每一筆紀錄都是愛自己的證明。", "持之以恆，健康的花園會越開越美麗！", "很棒的紀錄！今天的你也辛苦了。", "又完成了一次紀錄，離健康目標更近一步囉！", "超讚！植物們因為你的努力而開心地生長著。"];
+                        customMsg = msgs[Math.floor(Math.random() * msgs.length)];
+                    }
+
+                    // 若是補登過去的紀錄，加上特別讚美
+                    if (!isToday && (currentRecordType === '喝水' || currentRecordType === '步數')) {
+                         customMsg += "\n(補登紀錄也成功算入獎勵囉！)";
+                    }
+
+                    document.getElementById('success-message').innerText = customMsg;
                     document.getElementById('success-modal').style.display = 'flex';
                 } else { alert('❌ 上傳失敗'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄'; }
             } catch (error) { alert('❌ 連線錯誤'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄'; sendErrorLog(error.message); }
