@@ -649,10 +649,17 @@
             let growingPlants = []; // 正在中央生長區的植物階段紀錄
             
             if (allRecords.length > 0) {
-                // 計算凋零機制 (從使用者的第一筆紀錄開始算，每滿 24 小時扣 2 朵)
-                const firstRecordTime = allRecords[0];
-                const elapsedHoursTotal = (now - firstRecordTime) / (1000 * 60 * 60);
-                const decayCount = Math.floor(elapsedHoursTotal / 24) * 2;
+                // 🌟 修復凋零機制：改以「最新的一筆紀錄」為基準 🌟
+                // 只要媽媽有持續記錄 (最新紀錄在 24 小時內)，就不會扣減任何花朵。
+                // 若超過 24 小時未記錄，每滿一天才扣 2 朵。
+                const lastRecordTime = allRecords[allRecords.length - 1]; // 取得陣列最後一筆 (最新) 紀錄
+                const elapsedHoursSinceLastRecord = (now - lastRecordTime) / (1000 * 60 * 60);
+                
+                // 如果最新紀錄已經超過 24 小時，才開始計算凋零數量
+                let decayCount = 0;
+                if (elapsedHoursSinceLastRecord > 24) {
+                    decayCount = Math.floor(elapsedHoursSinceLastRecord / 24) * 2;
+                }
 
                 allRecords.forEach(recordTime => {
                     const ageInHours = (now - recordTime) / (1000 * 60 * 60);
@@ -670,6 +677,7 @@
                 });
                 // 扣除長期凋零數量 (確保底線為 0 朵，不會變負數)
                 gardenFlowerCount = Math.max(0, gardenFlowerCount - decayCount);
+            }
 
                 // =========================================
                 // 🌟 測試用：強制塞滿 192 朵花，模擬第一、二圈全滿狀態 🌟
@@ -677,7 +685,7 @@
                 //gardenFlowerCount = 192;
                 // =========================================
 
-            }
+            
 
             // 準備放入外圍花園的花朵陣列
             const collectedPlants = [];
@@ -1046,8 +1054,15 @@
             activeGrowingAges = []; // 每次更新時清空陣列
             
             if (allRecords.length > 0) {
-                const first = allRecords[0];
-                const decay = Math.floor((now - first) / (1000*60*60*24)) * 2;
+                // 🌟 同步修復凋零機制：改以「最新的一筆紀錄」為基準 🌟
+                const lastRecordTime = allRecords[allRecords.length - 1];
+                const elapsedHoursSinceLastRecord = (now - lastRecordTime) / (1000 * 60 * 60);
+                
+                let decayCount = 0;
+                if (elapsedHoursSinceLastRecord > 24) {
+                    decayCount = Math.floor(elapsedHoursSinceLastRecord / 24) * 2;
+                }
+
                 let harvested = 0;
                 
                 allRecords.forEach(t => {
@@ -1055,11 +1070,11 @@
                     if(age >= 8) {
                         harvested++;
                     } else if (age >= 0) {
-                        // 🌟 將所有 8 小時內的生長中植物，全部收錄到陣列裡 🌟
+                        // 將所有 8 小時內的生長中植物，全部收錄到陣列裡
                         activeGrowingAges.push(age);
                     }
                 });
-                gardenCount = Math.max(0, 4 + harvested - decay);
+                gardenCount = Math.max(0, 4 + harvested - decayCount);
             }
             
             // 排序：讓年紀最小(最新)的排在最前面
