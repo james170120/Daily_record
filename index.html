@@ -435,7 +435,7 @@
     
     <!-- 紀錄視窗 -->
     <div id="page-record" class="overlay-page">
-        <div class="back-to-game-btn" onclick="closeOverlay('page-record')">✖ 返回花園</div>
+        <div class="back-to-game-btn" onclick="closeOverlay('page-record')">返回花園</div>
         
         <!-- 🌟 將標題改為飲食與喝水，並換上 grid-3 🌟 -->
         <div class="section-title" id="record-page-title-food">🍽️ 飲食與喝水 (今日)</div>
@@ -458,7 +458,7 @@
 
     <!-- 盆栽視窗 -->
     <div id="page-plant" class="overlay-page">
-        <div class="back-to-game-btn" onclick="closeOverlay('page-plant')">✖ 返回花園</div>
+        <div class="back-to-game-btn" onclick="closeOverlay('page-plant')">返回花園</div>
         <div class="game-container">
             <h2 id="month-garden-title" style="margin-top:0; color:var(--accent);">生長區動態</h2>
             
@@ -482,7 +482,7 @@
 
     <!-- 行事曆視窗 -->
     <div id="page-calendar" class="overlay-page">
-        <div class="back-to-game-btn" onclick="closeOverlay('page-calendar')">✖ 返回花園</div>
+        <div class="back-to-game-btn" onclick="closeOverlay('page-calendar')">返回花園</div>
         <div class="calendar-header">
             <button class="calendar-nav-btn" onclick="changeMonth(-1)">◀</button>
             <span id="current-month-year"></span>
@@ -621,10 +621,20 @@
         }
         
         
-        // 點擊黑底關閉內部小彈窗
+        // =========================================
+        // 🌟 點擊空白處 (背景) 自動關閉視窗邏輯 🌟
+        // =========================================
+        // 1. 點擊黑底關閉內部小彈窗
         document.getElementById('input-modal').addEventListener('click', function(e) { if(e.target===this) this.style.display='none'; });
         document.getElementById('detail-modal').addEventListener('click', function(e) { if(e.target===this) this.style.display='none'; });
-
+        
+        // 2. 點擊毛玻璃背景關閉三大主選單 (紀錄、盆栽、行事曆)
+        ['page-record', 'page-plant', 'page-calendar'].forEach(pageId => {
+            document.getElementById(pageId).addEventListener('click', function(e) { 
+                // 只有點中背景本身 (e.target === this) 才會觸發關閉，點擊內部按鈕不會誤觸
+                if (e.target === this) closeOverlay(pageId); 
+            });
+        });
 
 
         function updateGardenLandscape25D() {
