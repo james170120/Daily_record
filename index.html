@@ -185,37 +185,36 @@
 
 
         /* =========================================
-           原野微風與昆蟲飛行特效
+           原野微風與昆蟲飛行特效 (效能升級版)
            ========================================= */
-
-        /* 昆蟲飛行軌跡 */
         @keyframes flyAcross {
-            0% { left: -10%; margin-top: 0px; }
-            25% { margin-top: -30px; }
-            50% { margin-top: 20px; }
-            75% { margin-top: -20px; }
-            100% { left: 110%; margin-top: 0px; }
+            0% { transform: translateX(-20vw) translateY(0px); }
+            25% { transform: translateX(30vw) translateY(-40px); }
+            50% { transform: translateX(60vw) translateY(30px); }
+            75% { transform: translateX(90vw) translateY(-30px); }
+            100% { transform: translateX(120vw) translateY(0px); }
         }
         @keyframes flyAcrossReverse {
-            0% { left: 110%; margin-top: 0px; }
-            25% { margin-top: 25px; }
-            50% { margin-top: -20px; }
-            75% { margin-top: 30px; }
-            100% { left: -10%; margin-top: 0px; }
+            0% { transform: scaleX(-1) translateX(-20vw) translateY(0px); }
+            25% { transform: scaleX(-1) translateX(30vw) translateY(35px); }
+            50% { transform: scaleX(-1) translateX(60vw) translateY(-25px); }
+            75% { transform: scaleX(-1) translateX(90vw) translateY(40px); }
+            100% { transform: scaleX(-1) translateX(120vw) translateY(0px); }
         }
 
-        /* 昆蟲共用樣式 (星星的一半大小 = 0.5rem) */
         .flying-insect {
             position: absolute;
             font-size: 0.5rem; 
-            z-index: 60; /* 確保飛在草地與花朵上方 */
-            filter: drop-shadow(0 15px 5px rgba(0,0,0,0.3)); /* 距離地面很高的陰影 */
+            z-index: 60; 
+            filter: drop-shadow(0 15px 5px rgba(0,0,0,0.3));
             animation: flyAcross 20s linear infinite;
+            top: var(--bug-start-y, 50%); /* 軌跡高度交給 JS 隨機決定 */
+            left: 0;
+            will-change: transform; /* 🌟 啟用 GPU 硬體加速，減少卡頓 🌟 */
         }
-        /* 向左飛行的獨立屬性 */
         .fly-reverse {
             animation: flyAcrossReverse 25s linear infinite;
-            transform: scaleX(-1); /* 把圖案水平翻轉 */
+            right: 0; left: auto;
         }
 
 
@@ -322,10 +321,13 @@
         /* =========================================
            3. 各功能視窗 (高質感亮色毛玻璃)
            ========================================= */
+        /* =========================================
+           3. 各功能視窗 (高質感亮色毛玻璃 - 🌟 效能優化版)
+           ========================================= */
         .overlay-page {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            /* 🌟 白色的毛玻璃遮罩，透出背後的花園 🌟 */
-            background: rgba(255,255,255,0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            /* 🌟 減輕 GPU 負擔：提高底色不透明度，降低毛玻璃運算數值 (12px -> 5px) 🌟 */
+            background: rgba(255,255,255,0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
             z-index: 40; display: none; overflow-y: auto; padding: 20px; padding-bottom: 80px;
             -webkit-overflow-scrolling: touch;
         }
@@ -945,11 +947,13 @@
                 floor.appendChild(grass);
             }
 
-            // 5. 🌟 獎勵機制：根據近 3 天的喝水與步數，動態產生蝴蝶與蜜蜂 🌟
+            // 5. 🌟 獎勵機制：保底生態 + 根據近 3 天紀錄動態累加蝴蝶與蜜蜂 🌟
             const wrapper = document.getElementById('garden-floor-wrapper');
             wrapper.querySelectorAll('.flying-insect').forEach(el => el.remove());
             
-            let rewardBugs = [];
+            // 🌟 關鍵修改：預設直接給予 2 隻蜜蜂與 2 隻蝴蝶作為保底生態 🌟
+            let rewardBugs = ['🐝', '🦋', '🐝', '🦋'];
+            
             const todayStr = getFormattedDate(new Date());
             const todayDt = new Date(todayStr + "T00:00:00");
 
@@ -968,21 +972,27 @@
                     });
                     const maxSteps = stepRecords.length > 0 ? Math.max(...stepRecords) : 0;
                     
-                    // 達成目標，發放獎勵昆蟲 (可持續存在 3 天)
+                    // 達成目標，額外發放獎勵昆蟲 (往上累加)
                     if (totalWater >= 1500) rewardBugs.push('🦋');
                     if (maxSteps >= 3000) rewardBugs.push('🐝');
                 }
             });
 
-            // 如果都沒達成，為了畫面豐富度，保底給 1 隻蜜蜂
-            if (rewardBugs.length === 0) rewardBugs.push('🐝');
-
-            // 將獲得的昆蟲渲染到畫面上
+            // 將獲得的所有昆蟲渲染到畫面上
             rewardBugs.forEach((bug, index) => {
                 const insect = document.createElement('div');
                 insect.innerText = bug;
                 insect.className = index % 2 === 0 ? 'flying-insect' : 'flying-insect fly-reverse';
-                insect.style.top = (35 + Math.random() * 45) + '%';
+                
+                // 🌟 獨立抽出一個函數來隨機決定高度 🌟
+                const randomizeHeight = () => {
+                    insect.style.setProperty('--bug-start-y', (25 + Math.random() * 55) + '%');
+                };
+                randomizeHeight(); // 初始生成時先決定一次
+                
+                // 🌟 關鍵機制：每次昆蟲飛出畫面 (動畫跑完一輪) 時，自動換一個新高度！ 🌟
+                insect.addEventListener('animationiteration', randomizeHeight);
+                
                 insect.style.animationDelay = '-' + (Math.random() * 20) + 's';
                 wrapper.appendChild(insect);
             });
