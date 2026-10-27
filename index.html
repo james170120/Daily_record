@@ -397,7 +397,18 @@
         .detail-group.warning .detail-time-title { color: var(--warning); }
         .detail-item { font-size: 0.95rem; margin: 8px 0 0 0; color: var(--text-color); display: flex; justify-content: space-between; align-items: flex-start; }
         .detail-item span.tag { font-size: 0.75rem; background: #f0f4f8; padding: 3px 8px; border-radius: 6px; color: var(--text-muted); margin-left: 10px; white-space: nowrap;}
-    
+        /* 🌟 防止連續點擊時出現反白與陰影 (樹木與農田隱藏按鈕專用) 🌟 */
+        .big-tree-25d, .farm-plot, .garden-item { user-select: none; -webkit-tap-highlight-color: transparent; }
+        .farm-plot { cursor: pointer; } /* 讓泥土出現滑鼠指標 */
+        
+        /* 🌟 新增：讓身體狀況按鈕可以橫跨 3 欄 🌟 */
+        .grid-full-3 { grid-column: span 3; }
+
+        /* 🌟 自訂成功提示彈窗樣式 🌟 */
+        .seed-animation { font-size: 4rem; margin: 10px 0; animation: breath 2s infinite ease-in-out; }
+
+
+
     </style>
 </head>
 <body>
@@ -414,6 +425,7 @@
         <div class="game-btn" onclick="openRecordPage()">📝</div>
         <div class="game-btn" onclick="openOverlay('page-plant')">🪴</div>
         <div class="game-btn" onclick="openOverlay('page-calendar')">📅</div>
+        <div class="game-btn" id="bgm-toggle-btn" onclick="toggleBgm()" style="width: 45px; height: 45px; font-size: 1.2rem; margin-top: 20px; box-shadow: none; border: 1px solid rgba(255,255,255,0.2);">🔇</div>
     </div>
 
     <!-- 第三層：遊戲功能視窗 -->
@@ -432,11 +444,12 @@
             <button class="record-btn" onclick="openInputModal('喝水', 'water')" style="border-bottom: 3px solid #3498db;"><span class="icon">💧</span>喝水</button>
         </div>
         <!-- 🌟 加上 ID 讓 JS 可以動態修改顯示的日期 🌟 -->
-        <div class="section-title" id="record-page-title-med">🏥 醫療與身體狀況 (今日)</div>
-        <div class="grid-2">
+        <<div class="section-title" id="record-page-title-med">🏥 醫療與身體活動 (今日)</div>
+        <div class="grid-3">
             <button class="record-btn" onclick="openInputModal('胰島素', 'medical')" style="border-bottom: 3px solid var(--danger);"><span class="icon">💉</span>胰島素</button>
             <button class="record-btn" onclick="openInputModal('吃藥', 'medical')" style="border-bottom: 3px solid var(--primary);"><span class="icon">💊</span>吃藥</button>
-            <button class="record-btn grid-full" onclick="openInputModal('身體狀況', 'status')" style="border-bottom: 3px solid var(--warning);"><span class="icon">🤒</span>身體狀況紀錄</button>
+            <button class="record-btn" onclick="openInputModal('步數', 'steps')" style="border-bottom: 3px solid #2ecc71;"><span class="icon">👣</span>步數</button>
+            <button class="record-btn grid-full-3" onclick="openInputModal('身體狀況', 'status')" style="border-bottom: 3px solid var(--warning);"><span class="icon">🤒</span>身體狀況紀錄</button>
         </div>
     </div>
 
@@ -834,6 +847,7 @@
                 soil.className = 'farm-plot';
                 soil.style.left = (t.x * 8) + '%';
                 soil.style.top = (t.y * 8) + '%';
+                soil.onclick = () => openOverlay('page-plant'); // 🌟 生長區點擊隱藏按鈕 🌟
                 floor.appendChild(soil);
             });
 
@@ -851,6 +865,7 @@
 
                 const plant = document.createElement('div');
                 plant.className = 'garden-item';
+                plant.onclick = () => openOverlay('page-plant'); // 🌟 植物點擊隱藏按鈕 🌟
                 const delay = (Math.random() * -7).toFixed(2);
                 plant.innerHTML = `<span class="swaying-plant" style="animation-delay: ${delay}s">${stage}</span>`;
                 plant.style.left = plantX + '%';
@@ -943,9 +958,9 @@
                 timeSelector.style.display = 'flex'; inputField.type = type === '胰島素' ? 'number' : 'text'; inputField.placeholder = type === '胰島素' ? '輸入劑量...' : '藥品名稱...';
             } else if (category === 'status') {
                 timeSelector.style.display = 'none'; inputField.type = 'text'; inputField.placeholder = '描述狀況...';
-            } else if (category === 'water') {
+            } else if (category === 'water' || category === 'steps') {
                 // 🌟 喝水專用：不需要選時段，直接跳出數字鍵盤 🌟
-                timeSelector.style.display = 'none'; inputField.type = 'number'; inputField.placeholder = '輸入喝水量 (ml)...';
+                timeSelector.style.display = 'none'; inputField.type = 'number'; inputField.placeholder = type === '喝水' ? '輸入喝水量 (ml)...' : '輸入目前總步數...';
             } else {
                 timeSelector.style.display = 'none'; inputField.type = 'text'; inputField.placeholder = `輸入${type}吃了什麼...`;
             }
@@ -996,7 +1011,14 @@
             document.getElementById('submit-btn').innerText = '儲存中...';
             try {
                 const response = await fetch(N8N_POST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.ok) { alert(`✅ 成功上傳紀錄`); loadData(); closeModal('input-modal'); } else { alert('❌ 上傳失敗'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄'; }
+                if (response.ok) { 
+                    loadData(); 
+                    closeModal('input-modal'); 
+                    // 🌟 隨機鼓勵語錄與彈出精美視窗 🌟
+                    const msgs = ["太棒了！每一筆紀錄都是愛自己的證明。", "持之以恆，健康的花園會越開越美麗！", "很棒的紀錄！今天的你也辛苦了。", "又完成了一次紀錄，離健康目標更近一步囉！", "超讚！植物們因為你的努力而開心地生長著。"];
+                    document.getElementById('success-message').innerText = msgs[Math.floor(Math.random() * msgs.length)];
+                    document.getElementById('success-modal').style.display = 'flex';
+                } else { alert('❌ 上傳失敗'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄'; }
             } catch (error) { alert('❌ 連線錯誤'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄'; sendErrorLog(error.message); }
         }
 
@@ -1100,9 +1122,9 @@
                 const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 if (recordsDB[dateStr] && recordsDB[dateStr].length > 0) {
                     const iconsCon = document.createElement('div'); iconsCon.className = 'record-icons';
-                    let hFood = false, hIns = false, hMed = false, hStat = false, hWater = false;
-                    recordsDB[dateStr].forEach(r => { if (r.category === 'food') hFood=true; if(r.type==='胰島素') hIns=true; if(r.type==='吃藥') hMed=true; if(r.category==='status') hStat=true; if(r.type==='喝水') hWater=true; });
-                    if(hFood) iconsCon.innerHTML += '<span>🍽️</span>'; if(hIns) iconsCon.innerHTML += '<span>💉</span>'; if(hMed) iconsCon.innerHTML += '<span>💊</span>'; if(hStat) iconsCon.innerHTML += '<span>🤒</span>'; if(hWater) iconsCon.innerHTML += '<span>💧</span>';
+                    let hFood = false, hIns = false, hMed = false, hStat = false, hWater = false, hSteps = false;
+                    recordsDB[dateStr].forEach(r => { if (r.category === 'food') hFood=true; if(r.type==='胰島素') hIns=true; if(r.type==='吃藥') hMed=true; if(r.category==='status') hStat=true; if(r.type==='喝水') hWater=true; if(r.type==='步數') hSteps=true; });
+                    if(hFood) iconsCon.innerHTML += '<span>🍽️</span>'; if(hIns) iconsCon.innerHTML += '<span>💉</span>'; if(hMed) iconsCon.innerHTML += '<span>💊</span>'; if(hStat) iconsCon.innerHTML += '<span>🤒</span>'; if(hWater) iconsCon.innerHTML += '<span>💧</span>'; if(hSteps) iconsCon.innerHTML += '<span>👣</span>';
                     cell.appendChild(iconsCon);
                 }
                 cell.onclick = () => openDetailModal(year, month, d);
@@ -1124,22 +1146,18 @@
             };
             
             // 🌟 獨立計算當日喝水總量 🌟
-            let totalWater = 0;
-            records.filter(r => r.type === '喝水').forEach(r => { totalWater += (parseInt(r.content) || 0); });
+            let totalWater = 0; records.filter(r => r.type === '喝水').forEach(r => { totalWater += (parseInt(r.content) || 0); });
+            // 🌟 獨立計算當日步數最大值 🌟
+            let stepRecords = records.filter(r => r.type === '步數').map(r => parseInt(r.content) || 0);
+            let maxSteps = stepRecords.length > 0 ? Math.max(...stepRecords) : 0;
             
             document.getElementById('detail-content').innerHTML = `
                 <div class="detail-group" style="border-left-color: var(--accent);"><div class="detail-time-title">🍽️ 飲食</div><div style="padding-left:5px;"><div style="font-size:0.85rem; color:var(--text-muted);">🥪 早餐</div>${fmt('早餐')}<div style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">🍱 午餐</div>${fmt('午餐')}<div style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">🍲 晚餐</div>${fmt('晚餐')}<div style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">🍎 點心</div>${fmt('點心')}</div></div>
-                
-                <!-- 🌟 喝水專屬區塊 (標題顯示今日總計) 🌟 -->
-                <div class="detail-group" style="border-left-color: #3498db;">
-                    <div class="detail-time-title">💧 喝水紀錄 (今日總計: ${totalWater} ml)</div>
-                    <div style="padding-left:5px;">${fmt('喝水')}</div>
-                </div>
-
+                <div class="detail-group" style="border-left-color: #3498db;"><div class="detail-time-title">💧 喝水紀錄 (今日總計: ${totalWater} ml)</div><div style="padding-left:5px;">${fmt('喝水')}</div></div>
+                <div class="detail-group" style="border-left-color: #2ecc71;"><div class="detail-time-title">👣 步數紀錄 (今日最高: ${maxSteps} 步)</div><div style="padding-left:5px;">${fmt('步數')}</div></div>
                 <div class="detail-group danger"><div class="detail-time-title">💉 胰島素</div><div style="padding-left:5px;">${fmt('胰島素', true)}</div></div>
                 <div class="detail-group" style="border-left-color: var(--primary);"><div class="detail-time-title">💊 吃藥</div><div style="padding-left:5px;">${fmt('吃藥', true)}</div></div>
                 <div class="detail-group warning"><div class="detail-time-title">🤒 身體狀況</div><div style="padding-left:5px;">${fmt('身體狀況')}</div></div>
-                
                 <button class="submit-btn" onclick="closeModal('detail-modal'); closeOverlay('page-calendar'); openRecordPage('${dateKey}')" style="width:100%; margin-top:20px; padding:15px; box-sizing:border-box;">➕ 補登 ${dateKey} 紀錄</button>
             `;
             
@@ -1202,15 +1220,43 @@
         // =========================================
         // 🌟 背景音樂系統 (防驚嚇淡入處理 + 自動嘗試播放) 🌟
         // =========================================
+        // =========================================
+        // 🌟 背景音樂系統 (記憶設定，預設關閉) 🌟
+        // =========================================
         const bgm = new Audio('bgm.mp3'); 
         bgm.loop = true;
-        bgm.volume = 0; // 🌟 初始音量設為 0，準備溫和淡入 🌟
-        let bgmStarted = false;
+        bgm.volume = 0.4;
+        
+        // 讀取手機記憶，預設為關閉 (false)
+        let bgmEnabled = localStorage.getItem('bgm_enabled') === 'true';
+        updateBgmBtnUI();
 
         // 當音樂讀取到長度資訊後，隨機跳轉到一個時間點作為開頭
-        bgm.addEventListener('loadedmetadata', () => {
-            bgm.currentTime = Math.random() * bgm.duration;
-        });
+        bgm.addEventListener('loadedmetadata', () => { bgm.currentTime = Math.random() * bgm.duration; });
+
+        function updateBgmBtnUI() {
+            const btn = document.getElementById('bgm-toggle-btn');
+            if (btn) btn.innerText = bgmEnabled ? '🎵' : '🔇';
+        }
+
+        function toggleBgm() {
+            bgmEnabled = !bgmEnabled;
+            localStorage.setItem('bgm_enabled', bgmEnabled);
+            updateBgmBtnUI();
+            
+            if (bgmEnabled) {
+                bgm.play().catch(err => console.log("等待互動"));
+            } else {
+                bgm.pause();
+            }
+        }
+        
+        // 如果使用者上次離開時是打開的，一載入畫面就嘗試播放
+        if (bgmEnabled) {
+            bgm.play().catch(err => {
+                document.body.addEventListener('click', () => { if(bgmEnabled) bgm.play(); }, { once: true });
+            });
+        }
 
         // 建立漸進式淡入函數 (大約 2 秒鐘從 0 緩升到 0.4)
         function playAndFadeIn() {
@@ -1252,5 +1298,17 @@
 
         loadData();
     </script>
+
+    <!-- 🌟 自訂成功提示彈窗 (取代原本的 alert) 🌟 -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <h2 style="color: var(--primary); margin-top: 0;">🎉 紀錄成功！</h2>
+            <p id="success-message" style="color: var(--text-color); font-size: 1.05rem; margin: 15px 0; line-height: 1.5;"></p>
+            <div class="seed-animation">🌰</div>
+            <p style="color: var(--accent); font-size: 1.1rem; font-weight: bold;">你獲得了一顆新種子！</p>
+            <button class="submit-btn" onclick="closeModal('success-modal')" style="margin-top: 20px; width: 100%;">太棒了</button>
+        </div>
+    </div>
+
 </body>
 </html>
