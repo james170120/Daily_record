@@ -404,8 +404,9 @@
         /* 🌟 新增：讓身體狀況按鈕可以橫跨 3 欄 🌟 */
         .grid-full-3 { grid-column: span 3; }
 
-        /* 🌟 自訂成功提示彈窗樣式 🌟 */
-        .seed-animation { font-size: 4rem; margin: 10px 0; animation: breath 2s infinite ease-in-out; }
+        /* 🌟 自訂成功提示彈窗樣式 (修正歪斜，改為專屬的原地彈跳動畫) 🌟 */
+        @keyframes pop-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1) translateY(-5px); } }
+        .seed-animation { font-size: 4.5rem; margin: 15px auto; animation: pop-bounce 2s infinite ease-in-out; display: flex; justify-content: center; }
 
 
 
@@ -421,11 +422,13 @@
 
     <!-- 第二層：遊戲右側浮動按鈕 -->
     <div class="game-sidebar">
+        <!-- 🌟 音樂按鈕移至最上方，變小且靠右 🌟 -->
+        <div class="game-btn" id="bgm-toggle-btn" onclick="toggleBgm()" style="width: 38px; height: 38px; font-size: 1rem; align-self: flex-end; margin-right: 5px; margin-bottom: 5px; box-shadow: none; border: 1px solid rgba(255,255,255,0.4);">🔇</div>
+        
         <!-- 🌟 改為呼叫 openRecordPage()，預設為今日 🌟 -->
         <div class="game-btn" onclick="openRecordPage()">📝</div>
         <div class="game-btn" onclick="openOverlay('page-plant')">🪴</div>
         <div class="game-btn" onclick="openOverlay('page-calendar')">📅</div>
-        <div class="game-btn" id="bgm-toggle-btn" onclick="toggleBgm()" style="width: 45px; height: 45px; font-size: 1.2rem; margin-top: 20px; box-shadow: none; border: 1px solid rgba(255,255,255,0.2);">🔇</div>
     </div>
 
     <!-- 第三層：遊戲功能視窗 -->
@@ -634,7 +637,10 @@
             Object.keys(recordsDB).forEach(date => {
                 recordsDB[date].forEach(r => {
                     let dt = new Date(`${date}T${r.time}:00`);
-                    if (!isNaN(dt.getTime())) allRecords.push(dt);
+                    // 🌟 嚴格過濾異常日期：排除 2026 年以前或未來的錯誤資料，保護花園不被異常凋零清空 🌟
+                    if (!isNaN(dt.getTime()) && dt.getFullYear() >= 2026 && dt <= now) {
+                        allRecords.push(dt);
+                    }
                 });
             });
             allRecords.sort((a, b) => a - b); // 依時間舊到新排序
@@ -1028,7 +1034,10 @@
             Object.keys(recordsDB).forEach(date => {
                 recordsDB[date].forEach(r => {
                     let dt = new Date(`${date}T${r.time}:00`);
-                    if (!isNaN(dt.getTime())) allRecords.push(dt);
+                    // 🌟 嚴格過濾異常日期：排除 2026 年以前或未來的錯誤資料，保護花園不被異常凋零清空 🌟
+                    if (!isNaN(dt.getTime()) && dt.getFullYear() >= 2026 && dt <= now) {
+                        allRecords.push(dt);
+                    }
                 });
             });
             allRecords.sort((a, b) => a - b);
