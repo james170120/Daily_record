@@ -444,7 +444,7 @@
             <button class="record-btn" onclick="openInputModal('喝水', 'water')" style="border-bottom: 3px solid #3498db;"><span class="icon">💧</span>喝水</button>
         </div>
         <!-- 🌟 加上 ID 讓 JS 可以動態修改顯示的日期 🌟 -->
-        <<div class="section-title" id="record-page-title-med">🏥 醫療與身體活動 (今日)</div>
+        <div class="section-title" id="record-page-title-med">🏥 醫療與身體活動 (今日)</div>
         <div class="grid-3">
             <button class="record-btn" onclick="openInputModal('胰島素', 'medical')" style="border-bottom: 3px solid var(--danger);"><span class="icon">💉</span>胰島素</button>
             <button class="record-btn" onclick="openInputModal('吃藥', 'medical')" style="border-bottom: 3px solid var(--primary);"><span class="icon">💊</span>吃藥</button>
@@ -1218,9 +1218,6 @@
 
 
         // =========================================
-        // 🌟 背景音樂系統 (防驚嚇淡入處理 + 自動嘗試播放) 🌟
-        // =========================================
-        // =========================================
         // 🌟 背景音樂系統 (記憶設定，預設關閉) 🌟
         // =========================================
         const bgm = new Audio('bgm.mp3'); 
@@ -1258,39 +1255,10 @@
             });
         }
 
-        // 建立漸進式淡入函數 (大約 2 秒鐘從 0 緩升到 0.4)
-        function playAndFadeIn() {
-            if (bgmStarted) return;
-            
-            // 嘗試播放
-            bgm.play().then(() => {
-                bgmStarted = true;
-                let currentVol = 0;
-                const targetVol = 0.4;
-                
-                // 每 100 毫秒增加 0.02 音量
-                const fadeInterval = setInterval(() => {
-                    currentVol += 0.02;
-                    if (currentVol >= targetVol) {
-                        currentVol = targetVol;
-                        clearInterval(fadeInterval); // 達到 40% 就停止增加
-                    }
-                    bgm.volume = currentVol;
-                }, 100);
-            }).catch(err => {
-                // 如果被瀏覽器阻擋自動播放，就安靜地失敗，等待下一步互動
-            });
-        }
+        // 在啟動時除了讀取資料，也同步檢查天氣
+        checkRealtimeWeather();
 
-        // 1. 網頁一載入，先嘗試自動播放 (某些瀏覽器狀態下會允許)
-        playAndFadeIn();
-
-        // 2. 如果被擋下來，就捕捉媽媽的「第一次任意觸控/點擊」，無縫啟動淡入
-        const initBgmEvents = ['click', 'touchstart'];
-        const unlockBgm = () => {
-            if (!bgmStarted) playAndFadeIn();
-        };
-        initBgmEvents.forEach(e => document.body.addEventListener(e, unlockBgm, { once: true }));
+        loadData();
 
         // 在啟動時除了讀取資料，也同步檢查天氣
         checkRealtimeWeather();
