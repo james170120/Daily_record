@@ -984,9 +984,10 @@
                 insect.innerText = bug;
                 insect.className = index % 2 === 0 ? 'flying-insect' : 'flying-insect fly-reverse';
                 
-                // 🌟 獨立抽出一個函數來隨機決定高度 🌟
+                // 🌟 獨立抽出一個函數來隨機決定高度 (嚴格限制在草地與地平線範圍) 🌟
                 const randomizeHeight = () => {
-                    insect.style.setProperty('--bug-start-y', (25 + Math.random() * 55) + '%');
+                    // 將起點從 25% 改為 50% (草地邊緣)，活動範圍向下延伸至 85% (草地前方)
+                    insect.style.setProperty('--bug-start-y', (50 + Math.random() * 35) + '%');
                 };
                 randomizeHeight(); // 初始生成時先決定一次
                 
