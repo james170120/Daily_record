@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>媽媽的健康日記 V2 (2.5D 遊戲版)</title>
 
-
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -23,15 +22,15 @@
            ========================================= */
         :root {
             --bg-color: #f0f4f8;
-            --panel-bg: rgba(255, 255, 255, 0.85); /* 半透明白底毛玻璃 */
-            --text-color: #2c3e50; /* 深藍灰，閱讀舒適不刺眼 */
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --text-color: #2c3e50;
             --text-muted: #7f8c8d;
-            --primary: #00bcd4; /* 更適合白底的亮藍色 */
+            --primary: #00bcd4;
             --primary-glow: rgba(0, 188, 212, 0.4);
             --accent: #2980b9; 
             --danger: #e74c3c;
             --warning: #f39c12;
-            --border: rgba(0, 0, 0, 0.08); /* 非常淡的淺灰邊框 */
+            --border: rgba(0, 0, 0, 0.08);
             
             --tag-food: #7ab1e0;
             --tag-status: #e3b341;
@@ -48,43 +47,22 @@
         #garden-world {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             z-index: 0; display: flex; flex-direction: column; overflow: hidden;
-            background-color: #000; /* 移除原本寫死的淺藍色 */
+            background-color: #000;
         }
         
-        /* 天空層改為 100% 高度，作為整個世界真正的底色 */
+        /* 天空層改為 100% 高度 */
         #garden-sky {
             position: absolute; top: 0; left: 0; 
             width: 100%; height: 100%; 
             transition: background 2s; z-index: 1;
         }
-        /* 調整漸層比例，上半部是天空，下半部是純色底色 */
         .sky-day { background: linear-gradient(to bottom, #74c7ff 0%, #c8ebff 40%, #c8ebff 100%); }
         .sky-night { background: linear-gradient(to bottom, #101828 0%, #1a2a42 40%, #1a2a42 100%); }
         
         .celestial-body {
-            position: absolute; top: 8%; right: 25%; font-size: 3.5rem;
-            filter: drop-shadow(0 0 15px rgba(255,255,255,0.8));
-            animation: floatUp 4s ease-in-out infinite alternate; z-index: 2;
-        }
-        
-        .star { position: absolute; color: #FFF; font-size: 0.8rem; animation: twinkle 2s infinite alternate; z-index: 1; }
-
-        /* =========================================
-           動畫關鍵影格 (修復星星與月亮不動的問題)
-           ========================================= */
-        @keyframes floatUp {
-            0% { transform: translateY(0px) scale(1); }
-            100% { transform: translateY(-15px) scale(1.05); } /* 增加移動幅度 */
-        }
-        @keyframes twinkle {
-            0% { opacity: 0.1; transform: scale(0.8); }
-            100% { opacity: 1; transform: scale(1.2); }
-        }
-
-        .celestial-body {
             position: absolute; 
-            top: 5%;  /* ⬅️ 調整這裡：數字越小，月亮越高 (原本是 8%) */
-            left: 8%; /* ⬅️ 調整這裡：數字越小，月亮越靠左 (原本是 12%) */
+            top: 5%;  
+            left: 8%; 
             font-size: 3.5rem;
             filter: drop-shadow(0 0 15px rgba(255,255,255,0.8));
             animation: floatUp 3s ease-in-out infinite alternate; z-index: 2;
@@ -96,20 +74,29 @@
         }
 
         /* =========================================
-           夜空流星特效 (修正直線物理與空中燃盡)
+           動畫關鍵影格
+           ========================================= */
+        @keyframes floatUp {
+            0% { transform: translateY(0px) scale(1); }
+            100% { transform: translateY(-15px) scale(1.05); } 
+        }
+        @keyframes twinkle {
+            0% { opacity: 0.1; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* =========================================
+           夜空流星特效
            ========================================= */
         @keyframes shootAcross {
-            /* 透過 translateX 讓流星沿著自身旋轉的角度「直直往前衝」 */
             0% { transform: rotate(var(--star-angle, 20deg)) translateX(-10vw) scale(0.5); opacity: 0; }
             2% { opacity: 1; transform: rotate(var(--star-angle, 20deg)) translateX(0vw) scale(1); } 
-            /* 12% 時(約3秒)提早燃燒殆盡，確保不會接觸到草地 */
             12% { transform: rotate(var(--star-angle, 20deg)) translateX(60vw) scale(0.2); opacity: 0; } 
             100% { transform: rotate(var(--star-angle, 20deg)) translateX(60vw); opacity: 0; } 
         }
         
         .shooting-star {
             position: absolute;
-            /* 起點改由變數控制，不再用動畫改變 top/left */
             left: var(--star-start-x, 0%);
             top: var(--star-start-y, 0%);
             width: 100px; height: 2px;
@@ -117,13 +104,12 @@
             border-radius: 50%;
             filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 15px rgba(0, 229, 255, 0.5)); 
             animation: shootAcross 25s infinite linear;
-            z-index: 1; /* 保持在天空底層 */
-            opacity: 0; /* 🌟 關鍵修復：預設為隱形，避免在動畫延遲(等待發射)期間露出原形 🌟 */
+            z-index: 1; 
+            opacity: 0; 
         }
 
-
         /* =========================================
-           天空飄雲特效 (日夜皆有)
+           天空飄雲特效
            ========================================= */
         @keyframes floatCloud {
             0% { transform: translateX(120vw); }
@@ -154,22 +140,18 @@
             width: 2px; height: 35px; 
             border-radius: 2px;
             animation: rainFall linear infinite;
-            opacity: 0; /* 🌟 關鍵修復：預設為隱形，避免一開始卡在畫面上方 🌟 */
+            opacity: 0; 
         }
 
         @keyframes rainFall {
             0% { transform: translateY(-50px) rotate(15deg); opacity: 0; }
             10% { opacity: 1; }
             80% { opacity: 1; }
-            /* 加深 Y 軸掉落距離，確保完整穿透畫面底部 */
             100% { transform: translateY(120vh) translateX(-30vh) rotate(15deg); opacity: 0; }
         }
 
-
-        
-
         /* =========================================
-           微風擺動動畫 (減速 50%)
+           微風擺動動畫
            ========================================= */
         @keyframes windBreeze {
             0%, 100% { transform: rotate(-10deg); }
@@ -178,14 +160,12 @@
         
         .swaying-plant {
             display: inline-block; 
-            /* 🌟 將動畫時間從 3.5s 延長到 7.0s (速度變慢 50%) 🌟 */
             animation: windBreeze 7s ease-in-out infinite; 
             transform-origin: bottom center; 
         }
 
-
         /* =========================================
-           原野微風與昆蟲飛行特效 (效能升級版)
+           原野微風與昆蟲飛行特效
            ========================================= */
         @keyframes flyAcross {
             0% { transform: translateX(-20vw) translateY(0px); }
@@ -208,134 +188,105 @@
             z-index: 60; 
             filter: drop-shadow(0 15px 5px rgba(0,0,0,0.3));
             animation: flyAcross 20s linear infinite;
-            top: var(--bug-start-y, 50%); /* 軌跡高度交給 JS 隨機決定 */
+            top: var(--bug-start-y, 50%);
             left: 0;
-            will-change: transform; /* 🌟 啟用 GPU 硬體加速，減少卡頓 🌟 */
+            will-change: transform;
         }
         .fly-reverse {
             animation: flyAcrossReverse 25s linear infinite;
             right: 0; left: auto;
         }
 
-
-
         /* =========================================
-           地平線與天空比例調整 (恢復寬闊透視，大樹回歸)
+           地平線與天空比例調整 (無限大地平線)
            ========================================= */
         #garden-floor-wrapper {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             perspective: 1200px; overflow: hidden; z-index: 10;
-            /* 🌟 恢復為 100%，讓草地邊緣自然淡出，大樹就不會被切掉了 🌟 */
             -webkit-mask-image: radial-gradient(ellipse 150% 120% at 50% 115%, black 55%, transparent 100%);
             mask-image: radial-gradient(ellipse 150% 120% at 50% 115%, black 55%, transparent 100%);
         }
 
-        /* 草地與網格 */
+        /* 🌟 草地與網格 (修正為完美正方形，尺寸暴增至 350vw) 🌟 */
         #garden-floor {
-            /* 調整 top 往上拉，並增加 height 來補足壓平後的空間 */
-            position: absolute; top: -35%; left: -40%; width: 180%; height: 200%;
+            position: absolute; 
+            width: 350vw; height: 350vw; 
+            top: -50vh; left: -125vw; 
             border-radius: 45%; 
             background-color: #8cc474; 
             background-image: 
                 linear-gradient(rgba(255,255,255,0.2) 2px, transparent 2px),
                 linear-gradient(90deg, rgba(255,255,255,0.2) 2px, transparent 2px),
                 radial-gradient(circle at 10px 10px, rgba(0,0,0,0.03) 2px, transparent 3px);
-            background-size: 8% 8%, 8% 8%, 30px 30px;
-            /* 🌟 關鍵：將 60deg 改為 72deg，讓草地更貼近平視角 🌟 */
+            background-size: 5% 5%, 5% 5%, 30px 30px; 
             transform: rotateX(72deg) rotateZ(45deg);
             transform-style: preserve-3d;
         }
 
-        /* 中間 4 格專用的「肥沃泥土」 */
+        /* 中間 4 格專用的「肥沃泥土」 (完美對齊 5% 網格) */
         .farm-plot {
-            position: absolute; width: 8.2%; height: 8.2%; 
+            position: absolute; width: 5%; height: 5%; 
             background-color: #795548; border: 2px solid #5D4037; box-sizing: border-box;
             border-radius: 4px; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+            cursor: pointer;
         }
 
-        /* 花草植物通用設定 (包含背景小草與中央生長區) */
+        /* 花草植物通用設定 */
         .garden-item {
             position: absolute; 
             transform-origin: bottom center; 
             transform: rotateZ(-45deg) rotateX(-72deg);
             transition: all 0.5s;
-            /* 🌟 再次淡化小花草，透明度降至 0.04 🌟 */
             text-shadow: -1px 4px 10px rgba(0,0,0,0.04);
+            user-select: none; -webkit-tap-highlight-color: transparent;
         }
         
-        /* 小草直接移除陰影，讓草地畫面保持清爽乾淨 */
         .grass-tuft { font-size: 1.2rem; opacity: 0.7; filter: none; }
         
         /* 左側大樹固定位 */
         .big-tree-25d {
             font-size: 9rem;
-            ttransform: rotateZ(-45deg) rotateX(-72deg);
-            /* 🌟 陰影往樹根收攏，透明度降到極限的 0.02 🌟 */
+            transform-origin: bottom center;
+            transform: rotateZ(-45deg) rotateX(-72deg); /* 修正拼字錯誤 */
             text-shadow: 0px 5px 20px rgba(0,0,0,0.02);
+            user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
         /* =========================================
-           2. 遊戲主 UI (右側飄浮按鈕 - 升級高質感毛玻璃)
+           2. 遊戲主 UI (右側飄浮按鈕)
            ========================================= */
         .game-sidebar {
-            /* 稍微往左邊靠一點，留出安全邊距 */
             position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
             display: flex; flex-direction: column; gap: 20px; z-index: 20;
         }
         
         .game-btn {
-            /* 稍微放大一點點，增加點擊的舒適度 */
             width: 64px; height: 64px; border-radius: 50%;
-            
-            /* 🌟 高質感毛玻璃背景 (透出背後的天空與天氣) 🌟 */
             background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px); /* 支援 iOS */
-            
-            /* 🌟 3D 立體光影與極細邊框 🌟 */
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.4);
             box-shadow: 
-                0 8px 16px rgba(0, 0, 0, 0.2),              /* 底部懸浮陰影 */
-                inset 0 4px 5px rgba(255, 255, 255, 0.5),   /* 頂部內發光 (立體凸起) */
-                inset 0 -4px 5px rgba(0, 0, 0, 0.05);       /* 底部內陰影 */
-                
+                0 8px 16px rgba(0, 0, 0, 0.2), 
+                inset 0 4px 5px rgba(255, 255, 255, 0.5), 
+                inset 0 -4px 5px rgba(0, 0, 0, 0.05);
             display: flex; justify-content: center; align-items: center;
             font-size: 1.8rem; cursor: pointer; 
-            
-            /* 加入一點 Q 彈的動畫曲線，讓互動更有遊戲感 */
             transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); 
         }
-        
-        /* 滑鼠懸停 (如果是用電腦版測試時會看到) */
-        .game-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: scale(1.05);
-        }
-        
-        /* 點擊壓下的 Q 彈回饋 */
-        .game-btn:active { 
-            transform: scale(0.92); 
-            box-shadow: 
-                0 3px 6px rgba(0, 0, 0, 0.3), 
-                inset 0 2px 5px rgba(0, 0, 0, 0.2); 
-        }
+        .game-btn:hover { background: rgba(255, 255, 255, 0.25); transform: scale(1.05); }
+        .game-btn:active { transform: scale(0.92); box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 2px 5px rgba(0, 0, 0, 0.2); }
 
         /* =========================================
            3. 各功能視窗 (高質感亮色毛玻璃)
            ========================================= */
-        /* =========================================
-           3. 各功能視窗 (高質感亮色毛玻璃 - 🌟 效能優化版)
-           ========================================= */
         .overlay-page {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            /* 🌟 減輕 GPU 負擔：提高底色不透明度，降低毛玻璃運算數值 (12px -> 5px) 🌟 */
             background: rgba(255,255,255,0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
             z-index: 40; display: none; overflow-y: auto; padding: 20px; padding-bottom: 80px;
             -webkit-overflow-scrolling: touch;
         }
         .overlay-page.active { display: block; }
         
-        /* 視窗頂部返回鍵 */
         .back-to-game-btn {
             position: sticky; top: 0; z-index: 50; display: inline-flex; align-items: center; gap: 5px;
             background: rgba(255, 255, 255, 0.9); color: var(--danger); border: 1px solid rgba(231, 76, 60, 0.3);
@@ -343,20 +294,18 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; margin-bottom: 20px;
         }
 
-        /* 視窗共用區塊設計 */
         .section-title { font-size: 1.1rem; margin-bottom: 15px; color: var(--accent); font-weight: bold; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        /* 🌟 新增 3 欄式網格，給飲食與喝水專用 🌟 */
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
         .grid-full { grid-column: span 2; } 
-        /* 🌟 按鈕整體縮小約 30% (padding 與字體調小) 🌟 */
+        .grid-full-3 { grid-column: span 3; }
+        
         button.record-btn { background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border); border-radius: 12px; padding: 14px 5px; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
-        /* 🌟 內部 Emoji 圖示也等比例縮小 🌟 */
         .icon { font-size: 1.5rem; margin-bottom: 5px; }
 
-        /* 盆栽畫面 (配合亮色系調整配色) */
+        /* 盆栽畫面 */
         .game-container { text-align: center; background: var(--panel-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
-        .pot-scene { position: relative; width: 100%; height: 220px; background: linear-gradient(to bottom, #a1dffb, #e6f7ff 50%, #a2d28f 50%, #68a34f 100%); border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: inset 0 0 15px rgba(0,0,0,0.1); }
+        .pot-scene { position: relative; width: 100%; height: 220px; background: linear-gradient(to bottom, #a1dffb, #e6f7ff 50%, #a2d28f 50%, #68a34f 100%); border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: inset 0 0 15px rgba(0,0,0,0.1); cursor: pointer; }
         .soil-patch { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 120px; height: 40px; background: #795548; border-radius: 50%; box-shadow: inset 0 5px 10px rgba(0,0,0,0.4); }
         .plant-avatar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); font-size: 5rem; animation: breath 3s infinite ease-in-out; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2)); }
         @keyframes breath { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05) translateY(-5px); } }
@@ -364,7 +313,7 @@
         .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00bcd4, #3498db); transition: width 0.5s; }
         .stage-info { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; }
 
-        /* 行事曆 (版面修正 - 亮色版) */
+        /* 行事曆 */
         .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; color: var(--text-color); font-size: 1.2rem; font-weight: bold; background: var(--panel-bg); border-radius: 12px 12px 0 0; }
         .calendar-nav-btn { background: transparent; border: none; color: var(--text-color); font-size: 1.2rem; cursor: pointer; }
         .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 10px; background: var(--panel-bg); }
@@ -374,9 +323,8 @@
         .day-cell.empty { background: transparent; border: none; }
         .record-icons { display: flex; gap: 2px; margin-top: auto; padding-bottom: 5px; flex-wrap: wrap; justify-content: center; font-size: 0.8rem; }
         
-        
         /* =========================================
-           4. 內部小彈窗 (新增紀錄、明細) - 亮色版
+           4. 內部小彈窗 (新增紀錄、明細)
            ========================================= */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.6); backdrop-filter: blur(6px); align-items: center; justify-content: center; z-index: 100; }
         .modal-content { background: var(--bg-color); padding: 20px; border-radius: 16px; width: 92%; max-width: 400px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
@@ -386,13 +334,13 @@
         .time-selector { display: none; gap: 8px; margin-bottom: 15px; }
         .time-btn { flex: 1; padding: 10px 0; background: #fff; border: 1px solid var(--border); color: var(--text-color); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .time-btn.selected { background: var(--primary); color: #fff; font-weight: bold; border-color: var(--primary); box-shadow: 0 0 8px var(--primary-glow); }
-        .submit-btn { background: var(--primary); color: #fff; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 10px var(--primary-glow); }
-        .close-btn { background: #fff; color: var(--text-muted); border: 1px solid var(--border); padding: 12px; border-radius: 8px; }
+        .submit-btn { background: var(--primary); color: #fff; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; box-shadow: 0 4px 10px var(--primary-glow); cursor: pointer;}
+        .close-btn { background: #fff; color: var(--text-muted); border: 1px solid var(--border); padding: 12px; border-radius: 8px; cursor: pointer;}
 
         /* 歷史明細 */
         .history-container { margin-bottom: 15px; display: none; }
         .history-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; border-left: 3px solid var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .edit-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; }
+        .edit-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;}
         .detail-group { background: #fff; border-radius: 8px; margin-bottom: 12px; padding: 12px; border-left: 4px solid var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .detail-group.danger { border-left-color: var(--danger); }
         .detail-group.warning { border-left-color: var(--warning); }
@@ -401,18 +349,10 @@
         .detail-group.warning .detail-time-title { color: var(--warning); }
         .detail-item { font-size: 0.95rem; margin: 8px 0 0 0; color: var(--text-color); display: flex; justify-content: space-between; align-items: flex-start; }
         .detail-item span.tag { font-size: 0.75rem; background: #f0f4f8; padding: 3px 8px; border-radius: 6px; color: var(--text-muted); margin-left: 10px; white-space: nowrap;}
-        /* 🌟 防止連續點擊時出現反白與陰影 (樹木與農田隱藏按鈕專用) 🌟 */
-        .big-tree-25d, .farm-plot, .garden-item { user-select: none; -webkit-tap-highlight-color: transparent; }
-        .farm-plot { cursor: pointer; } /* 讓泥土出現滑鼠指標 */
-        
-        /* 🌟 新增：讓身體狀況按鈕可以橫跨 3 欄 🌟 */
-        .grid-full-3 { grid-column: span 3; }
 
-        /* 🌟 自訂成功提示彈窗樣式 (修正歪斜，改為專屬的原地彈跳動畫) 🌟 */
+        /* 自訂成功提示彈窗樣式 */
         @keyframes pop-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1) translateY(-5px); } }
         .seed-animation { font-size: 4.5rem; margin: 15px auto; animation: pop-bounce 2s infinite ease-in-out; display: flex; justify-content: center; }
-
-
 
     </style>
 </head>
@@ -426,10 +366,7 @@
 
     <!-- 第二層：遊戲右側浮動按鈕 -->
     <div class="game-sidebar">
-        <!-- 🌟 音樂按鈕移至最上方，變小且靠右 🌟 -->
         <div class="game-btn" id="bgm-toggle-btn" onclick="toggleBgm()" style="width: 38px; height: 38px; font-size: 1rem; align-self: flex-end; margin-right: 5px; margin-bottom: 5px; box-shadow: none; border: 1px solid rgba(255,255,255,0.4);">🔇</div>
-        
-        <!-- 🌟 改為呼叫 openRecordPage()，預設為今日 🌟 -->
         <div class="game-btn" onclick="openRecordPage()">📝</div>
         <div class="game-btn" onclick="openOverlay('page-plant')">🪴</div>
         <div class="game-btn" onclick="openOverlay('page-calendar')">📅</div>
@@ -441,7 +378,6 @@
     <div id="page-record" class="overlay-page">
         <div class="back-to-game-btn" onclick="closeOverlay('page-record')">返回花園</div>
         
-        <!-- 🌟 將標題改為飲食與喝水，並換上 grid-3 🌟 -->
         <div class="section-title" id="record-page-title-food">🍽️ 飲食與喝水 (今日)</div>
         <div class="grid-3">
             <button class="record-btn" onclick="openInputModal('早餐', 'food')"><span class="icon">🥪</span>早餐</button>
@@ -450,7 +386,7 @@
             <button class="record-btn" onclick="openInputModal('點心', 'food')"><span class="icon">🍎</span>點心</button>
             <button class="record-btn" onclick="openInputModal('喝水', 'water')" style="border-bottom: 3px solid #3498db;"><span class="icon">💧</span>喝水</button>
         </div>
-        <!-- 🌟 加上 ID 讓 JS 可以動態修改顯示的日期 🌟 -->
+        
         <div class="section-title" id="record-page-title-med">🏥 醫療與身體活動 (今日)</div>
         <div class="grid-3">
             <button class="record-btn" onclick="openInputModal('胰島素', 'medical')" style="border-bottom: 3px solid var(--danger);"><span class="icon">💉</span>胰島素</button>
@@ -466,13 +402,11 @@
         <div class="game-container">
             <h2 id="month-garden-title" style="margin-top:0; color:var(--accent);">生長區動態</h2>
             
-            <!-- 🌟 加入操作提示文字 (預設隱藏，有多株植物時才顯示) 🌟 -->
             <div id="cycle-hint" style="font-size: 0.85rem; color: var(--primary); margin-bottom: 8px; font-weight: bold; display: none;">
                 👇 點擊下方盆栽，切換查看其他植物進度
             </div>
             
-            <!-- 🌟 加入 onclick 切換事件與滑鼠游標樣式 🌟 -->
-            <div class="pot-scene" onclick="cyclePlantStatus()" style="cursor: pointer;">
+            <div class="pot-scene" onclick="cyclePlantStatus()">
                 <div class="soil-patch"></div>
                 <div class="plant-avatar" id="plant-avatar">💤</div>
             </div>
@@ -545,42 +479,38 @@
 
         let currentRecordType = ''; let currentInputCategory = ''; let selectedTimePeriod = ''; let editingRecordId = null; 
         let currentDate = new Date(); let recordsDB = {};
-        // 🌟 新增變數：記憶現在是要記錄哪一天 (預設為今天) 🌟
         let targetRecordDate = getFormattedDate(new Date());
 
-        // 🌟 新增變數：記憶目前生長區的所有植物年紀，以及現在正查看到第幾株 🌟
         let activeGrowingAges = [];
         let currentViewingIndex = 0;
 
         const startYear = 2026;
         
-        // 替換為全數帶有莖葉、樹幹或盆底的植物，確保立體落地感
-        // 嚴選 5 種「自帶莖葉」的純花朵，打亂交錯排列以增加花園豐富度
-        // 🌟 移除了會平貼在地上的蓮花(🪷)，嚴格保留這 4 種帶有莖葉的立體花朵 🌟
         const fiveYearPlants = [
             '🌻', '🌷', '🌹', '🪻',
             '🌷', '🪻', '🌻', '🌹',
             '🌹', '🌻', '🪻', '🌷',
             '🪻', '🌹', '🌻', '🌷'
         ];
+        
         function getFormattedDate(dateObj) { return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`; }
 
         // --- 真實月相運算 (依據新月週期 29.530588天) ---
         function getRealMoonPhase(date) {
             let year = date.getFullYear(); let month = date.getMonth() + 1; let day = date.getDate();
             if (month < 3) { year--; month += 12; } ++month;
-            let jd = 365.25 * year + 30.6 * month + day - 694039.09; // 距公元 2000年已知新月的日數
+            let jd = 365.25 * year + 30.6 * month + day - 694039.09; 
             let phase = jd / 29.5305882;
-            let cycle = phase - Math.floor(phase); // 取得 0.0 ~ 0.999 的週期比例
+            let cycle = phase - Math.floor(phase); 
             
-            if (cycle < 0.05) return '🌑';      // 新月
-            else if (cycle < 0.2) return '🌒'; // 眉月
-            else if (cycle < 0.3) return '🌓'; // 上弦月
-            else if (cycle < 0.45) return '🌔';// 盈凸月
-            else if (cycle < 0.55) return '🌕';// 滿月
-            else if (cycle < 0.7) return '🌖'; // 虧凸月
-            else if (cycle < 0.8) return '🌗'; // 下弦月
-            else if (cycle < 0.95) return '🌘';// 殘月
+            if (cycle < 0.05) return '🌑';      
+            else if (cycle < 0.2) return '🌒'; 
+            else if (cycle < 0.3) return '🌓'; 
+            else if (cycle < 0.45) return '🌔';
+            else if (cycle < 0.55) return '🌕';
+            else if (cycle < 0.7) return '🌖'; 
+            else if (cycle < 0.8) return '🌗'; 
+            else if (cycle < 0.95) return '🌘';
             return '🌑';
         }
 
@@ -602,7 +532,7 @@
                     recordsDB[cleanDate].push(item);
                 });
                 
-                updateGardenLandscape25D(); // 渲染 2.5D 花園主畫面
+                updateGardenLandscape25D(); 
                 updatePlantLogic();
                 renderCalendar();
             } catch (error) { sendErrorLog(`讀取失敗: ${error.message}`); }
@@ -612,9 +542,8 @@
         function openOverlay(pageId) { document.getElementById(pageId).classList.add('active'); }
         function closeOverlay(pageId) { document.getElementById(pageId).classList.remove('active'); }
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
-        // 🌟 新增：開啟紀錄選單，並自動更新標題上的日期 🌟
+        
         function openRecordPage(dateStr) {
-            // 如果有傳入日期就用該日期，否則預設為今天
             targetRecordDate = dateStr || getFormattedDate(new Date());
             const displayDate = targetRecordDate === getFormattedDate(new Date()) ? '今日' : targetRecordDate;
             
@@ -624,52 +553,36 @@
             openOverlay('page-record');
         }
         
-        
-        // =========================================
-        // 🌟 點擊空白處 (背景) 自動關閉視窗邏輯 🌟
-        // =========================================
-        // 1. 點擊黑底關閉內部小彈窗
+        // 點擊背景關閉視窗邏輯
         document.getElementById('input-modal').addEventListener('click', function(e) { if(e.target===this) this.style.display='none'; });
         document.getElementById('detail-modal').addEventListener('click', function(e) { if(e.target===this) this.style.display='none'; });
         
-        // 2. 點擊毛玻璃背景關閉三大主選單 (紀錄、盆栽、行事曆)
         ['page-record', 'page-plant', 'page-calendar'].forEach(pageId => {
             document.getElementById(pageId).addEventListener('click', function(e) { 
-                // 只有點中背景本身 (e.target === this) 才會觸發關閉，點擊內部按鈕不會誤觸
                 if (e.target === this) closeOverlay(pageId); 
             });
         });
 
-
         function updateGardenLandscape25D() {
-            // =================================================================
-            // 🌟🌟🌟 全新：高頻互動的即時生長與 24 小時凋零系統 🌟🌟🌟
-            // =================================================================
             const now = new Date();
             let allRecords = [];
-            // 將所有歷史紀錄轉換為精確的 Date 物件，並丟進一個大陣列
             Object.keys(recordsDB).forEach(date => {
                 recordsDB[date].forEach(r => {
                     let dt = new Date(`${date}T${r.time}:00`);
-                    // 🌟 嚴格過濾異常日期：排除 2026 年以前或未來的錯誤資料，保護花園不被異常凋零清空 🌟
                     if (!isNaN(dt.getTime()) && dt.getFullYear() >= 2026 && dt <= now) {
                         allRecords.push(dt);
                     }
                 });
             });
-            allRecords.sort((a, b) => a - b); // 依時間舊到新排序
+            allRecords.sort((a, b) => a - b); 
 
-            let gardenFlowerCount = 4; // 初始設定：花園自帶 4 朵花
-            let growingPlants = []; // 正在中央生長區的植物階段紀錄
+            let gardenFlowerCount = 4; 
+            let growingPlants = []; 
             
             if (allRecords.length > 0) {
-                // 🌟 修復凋零機制：改以「最新的一筆紀錄」為基準 🌟
-                // 只要媽媽有持續記錄 (最新紀錄在 24 小時內)，就不會扣減任何花朵。
-                // 若超過 24 小時未記錄，每滿一天才扣 2 朵。
-                const lastRecordTime = allRecords[allRecords.length - 1]; // 取得陣列最後一筆 (最新) 紀錄
+                const lastRecordTime = allRecords[allRecords.length - 1]; 
                 const elapsedHoursSinceLastRecord = (now - lastRecordTime) / (1000 * 60 * 60);
                 
-                // 如果最新紀錄已經超過 24 小時，才開始計算凋零數量
                 let decayCount = 0;
                 if (elapsedHoursSinceLastRecord > 24) {
                     decayCount = Math.floor(elapsedHoursSinceLastRecord / 24) * 2;
@@ -678,51 +591,38 @@
                 allRecords.forEach(recordTime => {
                     const ageInHours = (now - recordTime) / (1000 * 60 * 60);
                     if (ageInHours >= 8) {
-                        // 超過 8 小時，植物已成熟並離開生長區，移盆進入外圍花園
                         gardenFlowerCount++;
                     } else if (ageInHours >= 0) {
-                        // 還在 8 小時內，留在中間 4 格生長區
-                        let stage = '🌰'; // 0~2小時: 種子
-                        if (ageInHours >= 6) stage = fiveYearPlants[Math.floor(Math.random() * fiveYearPlants.length)]; // 6~8小時: 開花
-                        else if (ageInHours >= 4) stage = '🌿'; // 4~6小時: 長葉
-                        else if (ageInHours >= 2) stage = '🌱'; // 2~4小時: 發芽
+                        let stage = '🌰'; 
+                        if (ageInHours >= 6) stage = fiveYearPlants[Math.floor(Math.random() * fiveYearPlants.length)]; 
+                        else if (ageInHours >= 4) stage = '🌿'; 
+                        else if (ageInHours >= 2) stage = '🌱'; 
                         growingPlants.push(stage);
                     }
                 });
-                // 扣除長期凋零數量 (確保底線為 0 朵，不會變負數)
                 gardenFlowerCount = Math.max(0, gardenFlowerCount - decayCount);
             }
 
-                // =========================================
-                // 🌟 測試用：強制塞滿 192 朵花，模擬第一、二圈全滿狀態 🌟
-                // (測試完排版後，請將下面這一行刪除或加上 // 註解)
-                //gardenFlowerCount = 192;
-                // =========================================
+            // =========================================
+            // 🌟 測試用：強制塞滿 400 朵花，一次看滿 11 圈塞 4 朵的壯觀景象 🌟
+            // (確認排列滿意後，請將下面這一行刪除或加上 // 註解)
+            gardenFlowerCount = 400; 
+            // =========================================
 
-            
-
-            // 準備放入外圍花園的花朵陣列
             const collectedPlants = [];
             for(let i = 0; i < gardenFlowerCount; i++) {
                 collectedPlants.push(fiveYearPlants[i % fiveYearPlants.length]);
             }
             
-            // 🌟 生長區擴充：最多顯示 16 株 (4格 * 每格 2x2 = 16) 🌟
             const displayGrowings = growingPlants.slice(-16);
             
-            // =========================================
-            // 🌟 測試用：強制塞滿 16 株不同階段的植物來看排版 🌟
-            // (確認排列整齊、大小滿意後，請將下面這一行刪除或加上 // 註解)
-            //const displayGrowings = ['🌰','🌱','🌿','🌷', '🌰','🌱','🌿','🌻', '🌰','🌱','🌿','🌹', '🌰','🌱','🌿','🪻'];
-            // =========================================
+            // 🌟 1. 生長區往上移動一格 (中心點從 9,10 改為 8,9) 🌟
+            const farmTiles = [ {x:8, y:8}, {x:9, y:8}, {x:8, y:9}, {x:9, y:9} ];
 
-            // 只需要定義 4 塊農田的基底座標
-            const farmTiles = [ {x:5, y:5}, {x:6, y:5}, {x:5, y:6}, {x:6, y:6} ];
-            
-            // 🌟 終極微調：往左移一點 (減少 dx)，讓 4 株植物達到完美的九宮格置中 🌟
+            // 嚴格限制在 5% 網格內的 4 個角落 (留白防壓線，絕對不出格)
             const growOffsets = [
-                {dx: 2.2, dy: 0.6}, {dx: 4.8, dy: 0.6},
-                {dx: 2.2, dy: 3.2}, {dx: 4.8, dy: 3.2}
+                {dx: 1.2, dy: 1.2}, {dx: 3.8, dy: 1.2},
+                {dx: 1.2, dy: 3.8}, {dx: 3.8, dy: 3.8}
             ];
 
             // 1. 渲染天空與月相
@@ -784,51 +684,41 @@
             }
             floor.innerHTML = '';
             
+            // 🌳 大樹本體
             const bigTree = document.createElement('div');
             bigTree.className = 'garden-item big-tree-25d';
             bigTree.innerHTML = '<span>🌳</span>';
-            bigTree.style.left = '15%'; 
-            bigTree.style.top = '40%';  
-            bigTree.style.zIndex = Math.floor(40 * 100 + 15); 
+            bigTree.style.left = '17%'; 
+            bigTree.style.top = '30%';  
+            bigTree.style.zIndex = Math.floor(30 * 100 + 17) - 5;
 
-            // =========================================
-            // 🌟 隱藏彩蛋：連續點擊大樹 5 次強制更新系統 🌟
-            // =========================================
             let treeClickCount = 0;
             let treeClickTimer = null;
-            
             bigTree.onclick = () => {
                 treeClickCount++;
-                clearTimeout(treeClickTimer); // 重置計時器
-                
+                clearTimeout(treeClickTimer);
                 if (treeClickCount >= 5) {
-                    //alert("🌳 系統更新精靈：正在為您重新載入最新版本...");
                     window.location.href = window.location.pathname + '?v=' + new Date().getTime();
                 } else {
-                    // 如果 2 秒內沒有繼續連點，就歸零重新計算 (避免平時誤觸累積)
-                    treeClickTimer = setTimeout(() => { 
-                        treeClickCount = 0; 
-                    }, 2000);
+                    treeClickTimer = setTimeout(() => { treeClickCount = 0; }, 2000);
                 }
             };
-
             floor.appendChild(bigTree);
 
-            // 3. 準備花圈空位與防重疊
+            
+            
+            // 讓花朵防撞雷達繼續發揮作用 (保留這兩行)
             const occupiedPoints = [];
-            occupiedPoints.push({x: 15, y: 40}); 
-            
-            const flowerOffsets = [
-                {dx: 2.4, dy: 0.2}, {dx: 5.6, dy: 0.2},
-                {dx: 2.4, dy: 2.6}, {dx: 5.6, dy: 2.6},
-                {dx: 2.4, dy: 5.0}, {dx: 5.6, dy: 5.0}
-            ];
+            occupiedPoints.push({x: 17, y: 30});
+
+            const flowerOffsets = growOffsets;
             let availableFlowerSpots = [];
+            let treeGrassSpots = []; // 🌟 新增：專屬樹下空地清單，把沒種花的座標留給小草 🌟
             
-            for (let r = 1; r <= 6; r++) {
+            for (let r = 1; r <= 11; r++) {
                 let ringTiles = [];
-                let min = 5 - r;
-                let max = 6 + r;
+                let min = 8 - r;
+                let max = 9 + r;
                 for (let rx = min; rx <= max; rx++) {
                     for (let ry = min; ry <= max; ry++) {
                         if (rx === min || rx === max || ry === min || ry === max) {
@@ -841,22 +731,30 @@
                 let ringSpots = [];
                 ringTiles.forEach(t => {
                     flowerOffsets.forEach(off => {
-                        ringSpots.push({
-                            left: t.x * 8 + off.dx + (Math.random() - 0.5),
-                            top: t.y * 8 + off.dy + (Math.random() - 0.5)
-                        });
+                        let spotX = t.x * 5 + off.dx + (Math.random() * 0.4 - 0.2);
+                        let spotY = t.y * 5 + off.dy + (Math.random() * 0.4 - 0.2);
+                        
+                        // 🌟 擴大樹的「禁建區」半徑至 7.5%，確保花朵不會藏在巨大的樹葉後面 🌟
+                        let distToTree = Math.sqrt(Math.pow(spotX - 17, 2) + Math.pow(spotY - 30, 2));
+                        // 🌟 修正 1：如果太靠近大樹，不種花，但把這個寶貴的座標存進樹下草地清單 🌟
+                        if (distToTree < 7.5) {
+                            treeGrassSpots.push({ left: spotX, top: spotY });
+                            return;
+                        }
+                        
+                        ringSpots.push({ left: spotX, top: spotY });
                     });
                 });
                 ringSpots.sort(() => Math.random() - 0.5); 
                 availableFlowerSpots.push(...ringSpots);
             }
 
-            // 將外圍花園的花朵種入空位 (已移除舊版月份擴增的錯誤迴圈)
+            // 3. 依序種下所有的花朵
             collectedPlants.forEach((flower) => {
                 if (availableFlowerSpots.length === 0) return;
                 
+                // 每種下一朵花，就把這個空位從清單中「消耗」掉
                 const spot = availableFlowerSpots.shift(); 
-                occupiedPoints.push({x: spot.left, y: spot.top});
                 
                 const pastPlant = document.createElement('div');
                 pastPlant.className = 'garden-item';
@@ -869,39 +767,37 @@
                 floor.appendChild(pastPlant);
             });
 
-            // 1. 先把 4 塊深色泥土底板畫好
+            // 先把 4 塊深色泥土底板畫好
             farmTiles.forEach(t => {
                 const soil = document.createElement('div');
                 soil.className = 'farm-plot';
-                soil.style.left = (t.x * 8) + '%';
-                soil.style.top = (t.y * 8) + '%';
-                soil.onclick = () => openOverlay('page-plant'); // 🌟 生長區點擊隱藏按鈕 🌟
+                soil.style.left = (t.x * 5) + '%';
+                soil.style.top = (t.y * 5) + '%';
+                soil.onclick = () => openOverlay('page-plant'); 
                 floor.appendChild(soil);
             });
 
-            // 2. 🌟 關鍵修正：將植物「平均分散」種植到 4 塊地，避免同一塊地擠滿 4 株大葉子 🌟
+            // 將生長區的植物種進農田
             displayGrowings.forEach((stage, index) => {
-                const tileIndex = index % 4; // 取餘數：0, 1, 2, 3 (輪流分配給 4 塊農田)
-                const offsetIndex = Math.floor(index / 4); // 除以4：0, 1, 2, 3 (決定種在農田的哪個角落)
+                const tileIndex = index % 4; 
+                const offsetIndex = Math.floor(index / 4); 
 
                 const t = farmTiles[tileIndex];
                 const off = growOffsets[offsetIndex];
 
-                const plantX = t.x * 8 + off.dx;
-                const plantY = t.y * 8 + off.dy;
-                occupiedPoints.push({x: plantX, y: plantY});
+                const plantX = t.x * 5 + off.dx;
+                const plantY = t.y * 5 + off.dy;
 
                 const plant = document.createElement('div');
                 plant.className = 'garden-item';
-                plant.onclick = () => openOverlay('page-plant'); // 🌟 植物點擊隱藏按鈕 🌟
+                plant.onclick = () => openOverlay('page-plant'); 
                 const delay = (Math.random() * -7).toFixed(2);
                 plant.innerHTML = `<span class="swaying-plant" style="animation-delay: ${delay}s">${stage}</span>`;
                 plant.style.left = plantX + '%';
                 plant.style.top = plantY + '%';
                 
-                // 動態依照生長階段設定大小
                 let size = '1.4rem'; 
-                if (stage === '🌰') size = '0.55rem';      
+                if (stage === '🌰') size = '0.55rem';     
                 else if (stage === '🌱') size = '0.85rem'; 
                 else if (stage === '🌿') size = '1.15rem'; 
                 
@@ -910,61 +806,47 @@
                 floor.appendChild(plant);
             });
 
-            // ... (下面保留原本的 "// 4. 隨機撒上小草裝飾" 不動)
+            // =========================================
+            // 🌟 4. 全新網格化小草：結合剩餘空位與樹下空位 🌟
+            // =========================================
+            // 將沒種花的剩餘空位，加上大樹專屬空位合併起來
+            const allGrassSpots = availableFlowerSpots.concat(treeGrassSpots);
+            
+            allGrassSpots.forEach(spot => {
+                // 🌟 修正 2：2.5D 等角投影絕對公式！X與Y相加小於 36 代表已超出草原邊界，直接剃除防升天 🌟
+                if ((spot.left + spot.top) < 36) return;
 
-            // 4. 隨機撒上小草裝飾 (雷達防重疊機制)
-            for(let i=0; i<135; i++) {
-                let gx, gy, isOverlapping;
-                let attempts = 0; 
-                do {
-                    gx = 15 + Math.random() * 70; 
-                    gy = 15 + Math.random() * 70;
-                    isOverlapping = false;
+                // 每個空地有 55% 的機率長出小草 (機率微微調高，讓草原更豐滿)
+                if (Math.random() < 0.55) {
+                    const grass = document.createElement('div');
+                    grass.className = 'garden-item grass-tuft';
+                    const delay = (Math.random() * -7).toFixed(2);
+                    grass.innerHTML = `<span class="swaying-plant" style="animation-delay: ${delay}s">🌿</span>`; 
                     
-                    if (gx >= 38 && gx <= 58 && gy >= 38 && gy <= 58) {
-                        isOverlapping = true;
-                        continue;
-                    }
+                    let gx = spot.left + (Math.random() * 1.5 - 0.75);
+                    let gy = spot.top + (Math.random() * 1.5 - 0.75);
                     
-                    for (let pt of occupiedPoints) {
-                        let dist = Math.sqrt(Math.pow(gx - pt.x, 2) + Math.pow(gy - pt.y, 2));
-                        if (dist < 3.5) { 
-                            isOverlapping = true;
-                            break;
-                        }
-                    }
-                    attempts++;
-                } while (isOverlapping && attempts < 50); 
+                    grass.style.left = gx + '%';
+                    grass.style.top = gy + '%';
+                    grass.style.fontSize = (0.7 + Math.random() * 0.5) + 'rem';
+                    grass.style.zIndex = Math.floor(gy * 100 + gx);
+                    floor.appendChild(grass);
+                }
+            });
 
-                if (isOverlapping) continue;
-
-                const grass = document.createElement('div');
-                grass.className = 'garden-item';
-                const delay = (Math.random() * -7).toFixed(2);
-                grass.innerHTML = `<span class="swaying-plant" style="animation-delay: ${delay}s">🌿</span>`; 
-                grass.style.left = gx + '%';
-                grass.style.top = gy + '%';
-                grass.style.fontSize = (0.7 + Math.random() * 0.5) + 'rem';
-                grass.style.zIndex = Math.floor(gy * 100 + gx);
-                floor.appendChild(grass);
-            }
-
-            // 5. 🌟 獎勵機制：保底生態 + 根據近 3 天紀錄動態累加蝴蝶與蜜蜂 🌟
+            // 5. 獎勵機制：保底生態 + 根據近 3 天紀錄動態累加蝴蝶與蜜蜂
             const wrapper = document.getElementById('garden-floor-wrapper');
             wrapper.querySelectorAll('.flying-insect').forEach(el => el.remove());
             
-            // 🌟 關鍵修改：預設直接給予 2 隻蜜蜂與 2 隻蝴蝶作為保底生態 🌟
             let rewardBugs = ['🐝', '🦋', '🐝', '🦋'];
             
             const todayStr = getFormattedDate(new Date());
             const todayDt = new Date(todayStr + "T00:00:00");
 
-            // 掃描歷史紀錄，計算每天的喝水與步數
             Object.keys(recordsDB).forEach(dateStr => {
                 const recordDt = new Date(dateStr + "T00:00:00");
                 const diffDays = Math.floor((todayDt - recordDt) / (1000 * 60 * 60 * 24));
                 
-                // 只看「今天、昨天、前天」這 3 天的紀錄
                 if (diffDays >= 0 && diffDays < 3) {
                     let totalWater = 0;
                     let stepRecords = [];
@@ -974,28 +856,22 @@
                     });
                     const maxSteps = stepRecords.length > 0 ? Math.max(...stepRecords) : 0;
                     
-                    // 達成目標，額外發放獎勵昆蟲 (往上累加)
                     if (totalWater >= 1500) rewardBugs.push('🦋');
                     if (maxSteps >= 3000) rewardBugs.push('🐝');
                 }
             });
 
-            // 將獲得的所有昆蟲渲染到畫面上
             rewardBugs.forEach((bug, index) => {
                 const insect = document.createElement('div');
                 insect.innerText = bug;
                 insect.className = index % 2 === 0 ? 'flying-insect' : 'flying-insect fly-reverse';
                 
-                // 🌟 獨立抽出一個函數來隨機決定高度 (嚴格限制在草地與地平線範圍) 🌟
                 const randomizeHeight = () => {
-                    // 將起點從 25% 改為 50% (草地邊緣)，活動範圍向下延伸至 85% (草地前方)
                     insect.style.setProperty('--bug-start-y', (50 + Math.random() * 35) + '%');
                 };
-                randomizeHeight(); // 初始生成時先決定一次
+                randomizeHeight(); 
                 
-                // 🌟 關鍵機制：每次昆蟲飛出畫面 (動畫跑完一輪) 時，自動換一個新高度！ 🌟
                 insect.addEventListener('animationiteration', randomizeHeight);
-                
                 insect.style.animationDelay = '-' + (Math.random() * 20) + 's';
                 wrapper.appendChild(insect);
             });
@@ -1018,7 +894,6 @@
             } else if (category === 'status') {
                 timeSelector.style.display = 'none'; inputField.type = 'text'; inputField.placeholder = '描述狀況...';
             } else if (category === 'water' || category === 'steps') {
-                // 🌟 喝水專用：不需要選時段，直接跳出數字鍵盤 🌟
                 timeSelector.style.display = 'none'; inputField.type = 'number'; inputField.placeholder = type === '喝水' ? '輸入喝水量 (ml)...' : '輸入目前總步數...';
             } else {
                 timeSelector.style.display = 'none'; inputField.type = 'text'; inputField.placeholder = `輸入${type}吃了什麼...`;
@@ -1028,7 +903,6 @@
         }
 
         function renderHistoryList(type) {
-            // 🌟 改為讀取 targetRecordDate (補登的日期) 🌟
             const typeRecords = (recordsDB[targetRecordDate] || []).filter(r => r.type === type);
             const container = document.getElementById('history-container');
             if (typeRecords.length > 0) {
@@ -1045,7 +919,6 @@
         }
 
         function startEdit(id) {
-            // 🌟 改為讀取 targetRecordDate (補登的日期) 🌟
             const rec = recordsDB[targetRecordDate].find(r => r.id === id);
             if (rec) {
                 editingRecordId = id;
@@ -1064,17 +937,15 @@
             if (currentInputCategory === 'medical' && !selectedTimePeriod) return alert('請選擇時段！');
             if (!val || !chosenTime) return alert('時間與內容不能為空！');
             
-            // 🌟 儲存時，寫入 targetRecordDate (補登的日期) 🌟
             const payload = { date: targetRecordDate, time: chosenTime, period: currentInputCategory === 'medical' ? selectedTimePeriod : '', type: currentRecordType, content: val, category: currentInputCategory };
             if(editingRecordId !== null) payload.id = editingRecordId; 
             document.getElementById('submit-btn').innerText = '儲存中...';
             try {
                 const response = await fetch(N8N_POST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (response.ok) { 
-                    await loadData(); // 確保重新讀取最新總和
+                    await loadData(); 
                     closeModal('input-modal'); 
                     
-                    // 🌟 結算該日期的總喝水量與最高步數 🌟
                     const typeRecords = recordsDB[targetRecordDate] || [];
                     let totalWater = 0;
                     let stepRecords = [];
@@ -1087,7 +958,6 @@
                     let customMsg = "太棒了！每一筆紀錄都是愛自己的證明。";
                     const isToday = targetRecordDate === getFormattedDate(new Date());
 
-                    // 針對喝水與步數給予專屬提示
                     if (currentRecordType === '喝水') {
                         if (totalWater >= 1500) {
                             customMsg = `太棒了！目標達成！\n本日喝水已達 ${totalWater} ml，為花園吸引了一隻美麗的蝴蝶 🦋！`;
@@ -1109,7 +979,6 @@
                         customMsg = msgs[Math.floor(Math.random() * msgs.length)];
                     }
 
-                    // 若是補登過去的紀錄，加上特別讚美
                     if (!isToday && (currentRecordType === '喝水' || currentRecordType === '步數')) {
                          customMsg += "\n(補登紀錄也成功算入獎勵囉！)";
                     }
@@ -1126,7 +995,6 @@
             Object.keys(recordsDB).forEach(date => {
                 recordsDB[date].forEach(r => {
                     let dt = new Date(`${date}T${r.time}:00`);
-                    // 🌟 嚴格過濾異常日期：排除 2026 年以前或未來的錯誤資料，保護花園不被異常凋零清空 🌟
                     if (!isNaN(dt.getTime()) && dt.getFullYear() >= 2026 && dt <= now) {
                         allRecords.push(dt);
                     }
@@ -1135,10 +1003,9 @@
             allRecords.sort((a, b) => a - b);
             
             let gardenCount = 4;
-            activeGrowingAges = []; // 每次更新時清空陣列
+            activeGrowingAges = []; 
             
             if (allRecords.length > 0) {
-                // 🌟 同步修復凋零機制：改以「最新的一筆紀錄」為基準 🌟
                 const lastRecordTime = allRecords[allRecords.length - 1];
                 const elapsedHoursSinceLastRecord = (now - lastRecordTime) / (1000 * 60 * 60);
                 
@@ -1154,24 +1021,19 @@
                     if(age >= 8) {
                         harvested++;
                     } else if (age >= 0) {
-                        // 將所有 8 小時內的生長中植物，全部收錄到陣列裡
                         activeGrowingAges.push(age);
                     }
                 });
                 gardenCount = Math.max(0, 4 + harvested - decayCount);
             }
             
-            // 排序：讓年紀最小(最新)的排在最前面
             activeGrowingAges.sort((a, b) => a - b);
-            
             document.getElementById('garden-total-flowers').innerText = gardenCount;
             
-            // 每次打開視窗都從最新的一株開始看
             currentViewingIndex = 0;
             renderCurrentPlantStatus();
         }
 
-        // 🌟 新增：負責渲染「當下正在查看的那株植物」的 UI 🌟
         function renderCurrentPlantStatus() {
             const avatar = document.getElementById('plant-avatar');
             const text = document.getElementById('plant-stage-text');
@@ -1188,7 +1050,6 @@
                 let percent = Math.min((age / 8) * 100, 100);
                 pBar.style.width = `${percent}%`;
                 
-                // 在標題後方加上 (目前株數/總株數)
                 const countLabel = `(${currentViewingIndex + 1}/${activeGrowingAges.length})`;
                 
                 if (age >= 6) { avatar.innerText = '🌷'; text.innerText = `階段 4: 準備移盆的開花 ${countLabel}`; }
@@ -1196,19 +1057,15 @@
                 else if (age >= 2) { avatar.innerText = '🌱'; text.innerText = `階段 2: 努力發芽中 ${countLabel}`; }
                 else { avatar.innerText = '🌰'; text.innerText = `階段 1: 剛種下的種子 ${countLabel}`; }
                 
-                // 如果有超過一株植物，就顯示提示文字
                 if(hint) hint.style.display = activeGrowingAges.length > 1 ? 'block' : 'none';
             }
         }
 
-        // 🌟 新增：點擊盆栽時觸發的切換邏輯 🌟
         function cyclePlantStatus() {
             if (activeGrowingAges.length > 1) {
-                // 索引值 +1，如果到底了就回到 0 (形成無限迴圈)
                 currentViewingIndex = (currentViewingIndex + 1) % activeGrowingAges.length;
                 renderCurrentPlantStatus();
                 
-                // 增加一點微小的動畫重置，讓點擊有「切換」的視覺回饋
                 const avatar = document.getElementById('plant-avatar');
                 avatar.style.animation = 'none';
                 setTimeout(() => avatar.style.animation = 'breath 3s infinite ease-in-out', 10);
@@ -1253,9 +1110,7 @@
                 return items.map(i => `<div class="detail-item" style="padding-left: 5px;"><div style="flex:1; color:var(--text-color);">${isMed?'<b>['+(i.period||'未分類')+']</b> ':''}${i.content}</div><span class="tag">${i.time}</span></div>`).join('');
             };
             
-            // 🌟 獨立計算當日喝水總量 🌟
             let totalWater = 0; records.filter(r => r.type === '喝水').forEach(r => { totalWater += (parseInt(r.content) || 0); });
-            // 🌟 獨立計算當日步數最大值 🌟
             let stepRecords = records.filter(r => r.type === '步數').map(r => parseInt(r.content) || 0);
             let maxSteps = stepRecords.length > 0 ? Math.max(...stepRecords) : 0;
             
@@ -1277,13 +1132,11 @@
         // =========================================
         async function checkRealtimeWeather() {
             try {
-                // 🌟 將這裡替換成你剛剛在 n8n 建立的 Webhook Production URL 🌟
                 const n8nWeatherUrl = 'https://orthodox-oarfish.pikapod.net/webhook/ffaf46df-c23c-4613-8c5b-5095c84da6eas';
                 
                 const response = await fetch(n8nWeatherUrl);
                 const data = await response.json();
 
-                // 根據 n8n 回傳的 isRaining 決定要不要下雨
                 if (data.isRaining) {
                     document.getElementById('weather-layer').style.display = 'block';
                     document.getElementById('sun-icon').style.display = 'none';
@@ -1295,38 +1148,10 @@
                 }
             } catch (error) {
                 console.error("無法取得天氣資料，維持預設晴天", error);
-                // 發生錯誤時保底顯示晴天
                 document.getElementById('weather-layer').style.display = 'none';
                 document.getElementById('sun-icon').style.display = 'block';
             }
         }
-
-        function startRainEffect() {
-            const world = document.getElementById('garden-world');
-            let weatherLayer = document.getElementById('weather-layer');
-            if (!weatherLayer) {
-                weatherLayer = document.createElement('div');
-                weatherLayer.id = 'weather-layer';
-                world.appendChild(weatherLayer);
-            }
-            weatherLayer.innerHTML = ''; 
-
-            // 🌟 為了補足右側空窗，將起點範圍拉寬到 -20% ~ 150%，數量對應增加至 160 滴 🌟
-            for (let i = 0; i < 160; i++) {
-                const drop = document.createElement('div');
-                drop.className = 'raindrop';
-                
-                drop.style.left = (-20 + Math.random() * 170) + '%'; 
-                drop.style.top = (Math.random() * -50) + 'px';
-                
-                // 🌟 再慢 20%：將落下時間拉長為 0.8秒 ~ 2.0秒 🌟
-                drop.style.animationDuration = (1.5 + Math.random() * 2.0) + 's';
-                drop.style.animationDelay = (Math.random() * 2) + 's';
-                
-                weatherLayer.appendChild(drop);
-            }
-        }
-
 
         // =========================================
         // 🌟 背景音樂系統 (記憶設定，預設關閉) 🌟
@@ -1335,11 +1160,9 @@
         bgm.loop = true;
         bgm.volume = 0.4;
         
-        // 讀取手機記憶，預設為關閉 (false)
         let bgmEnabled = localStorage.getItem('bgm_enabled') === 'true';
         updateBgmBtnUI();
 
-        // 當音樂讀取到長度資訊後，隨機跳轉到一個時間點作為開頭
         bgm.addEventListener('loadedmetadata', () => { bgm.currentTime = Math.random() * bgm.duration; });
 
         function updateBgmBtnUI() {
@@ -1359,22 +1182,14 @@
             }
         }
         
-        // 如果使用者上次離開時是打開的，一載入畫面就嘗試播放
         if (bgmEnabled) {
             bgm.play().catch(err => {
                 document.body.addEventListener('click', () => { if(bgmEnabled) bgm.play(); }, { once: true });
             });
         }
 
-        // 在啟動時除了讀取資料，也同步檢查天氣
+        // 系統啟動，檢查天氣與讀取資料
         checkRealtimeWeather();
-
-        loadData();
-
-        // 在啟動時除了讀取資料，也同步檢查天氣
-        checkRealtimeWeather();
-
-
         loadData();
     </script>
 
