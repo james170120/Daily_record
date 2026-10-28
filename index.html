@@ -207,11 +207,12 @@
             mask-image: radial-gradient(ellipse 150% 120% at 50% 115%, black 55%, transparent 100%);
         }
 
-        /* 🌟 草地與網格 (修正為完美正方形，尺寸暴增至 350vw) 🌟 */
+       
+        /* 🌟 草地與網格 (回歸完美的 350vw 置中，top 往下壓讓出天空) 🌟 */
         #garden-floor {
             position: absolute; 
             width: 350vw; height: 350vw; 
-            top: -50vh; left: -125vw; 
+            top: -30vh; left: -125vw; /* 完美的 1:1 置中比例 */
             border-radius: 45%; 
             background-color: #8cc474; 
             background-image: 
@@ -688,9 +689,11 @@
             const bigTree = document.createElement('div');
             bigTree.className = 'garden-item big-tree-25d';
             bigTree.innerHTML = '<span>🌳</span>';
+            // 依據你的修正，維持 17%, 30%
             bigTree.style.left = '17%'; 
             bigTree.style.top = '30%';  
-            bigTree.style.zIndex = Math.floor(30 * 100 + 17) - 5;
+            // 🌟 樹幹層級往下一階 (減5)，讓前方的花草自然蓋住樹幹 🌟
+            bigTree.style.zIndex = Math.floor(30 * 100 + 17) - 5; 
 
             let treeClickCount = 0;
             let treeClickTimer = null;
@@ -705,17 +708,17 @@
             };
             floor.appendChild(bigTree);
 
-            
-            
-            // 讓花朵防撞雷達繼續發揮作用 (保留這兩行)
+            // ⚠️ 已經完全移除「終極大樹護城草」的程式碼 ⚠️
+
             const occupiedPoints = [];
             occupiedPoints.push({x: 17, y: 30});
-
+            
             const flowerOffsets = growOffsets;
             let availableFlowerSpots = [];
-            let treeGrassSpots = []; // 🌟 新增：專屬樹下空地清單，把沒種花的座標留給小草 🌟
+            let treeGrassSpots = []; 
             
-            for (let r = 1; r <= 11; r++) {
+            // 🌟 多加一圈花圈 (改為 12 圈)，確保往下移的草原下方也能填滿 🌟
+            for (let r = 1; r <= 12; r++) { 
                 let ringTiles = [];
                 let min = 8 - r;
                 let max = 9 + r;
@@ -734,12 +737,12 @@
                         let spotX = t.x * 5 + off.dx + (Math.random() * 0.4 - 0.2);
                         let spotY = t.y * 5 + off.dy + (Math.random() * 0.4 - 0.2);
                         
-                        // 🌟 擴大樹的「禁建區」半徑至 7.5%，確保花朵不會藏在巨大的樹葉後面 🌟
                         let distToTree = Math.sqrt(Math.pow(spotX - 17, 2) + Math.pow(spotY - 30, 2));
-                        // 🌟 修正 1：如果太靠近大樹，不種花，但把這個寶貴的座標存進樹下草地清單 🌟
+                        
+                        // 大樹防護區，不種花，留給小草
                         if (distToTree < 7.5) {
                             treeGrassSpots.push({ left: spotX, top: spotY });
-                            return;
+                            return; 
                         }
                         
                         ringSpots.push({ left: spotX, top: spotY });
@@ -753,7 +756,6 @@
             collectedPlants.forEach((flower) => {
                 if (availableFlowerSpots.length === 0) return;
                 
-                // 每種下一朵花，就把這個空位從清單中「消耗」掉
                 const spot = availableFlowerSpots.shift(); 
                 
                 const pastPlant = document.createElement('div');
@@ -809,14 +811,12 @@
             // =========================================
             // 🌟 4. 全新網格化小草：結合剩餘空位與樹下空位 🌟
             // =========================================
-            // 將沒種花的剩餘空位，加上大樹專屬空位合併起來
             const allGrassSpots = availableFlowerSpots.concat(treeGrassSpots);
             
             allGrassSpots.forEach(spot => {
-                // 🌟 修正 2：2.5D 等角投影絕對公式！X與Y相加小於 36 代表已超出草原邊界，直接剃除防升天 🌟
+                // 限制天際線：X+Y 小於 36 不種小草 (解決飛天草問題)
                 if ((spot.left + spot.top) < 36) return;
 
-                // 每個空地有 55% 的機率長出小草 (機率微微調高，讓草原更豐滿)
                 if (Math.random() < 0.55) {
                     const grass = document.createElement('div');
                     grass.className = 'garden-item grass-tuft';
