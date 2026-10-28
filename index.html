@@ -518,12 +518,24 @@
         async function sendErrorLog(errorMsg) {
             const now = new Date();
             const payload = { date: getFormattedDate(now), time: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), period: '', type: '系統報錯', content: errorMsg, category: 'error' };
-            try { await fetch(N8N_POST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); } catch(e) {}
+            try { 
+                await fetch(N8N_POST_URL, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Garden-Auth': 'mama-2026'  /* 🌟 帶上暗號 🌟 */
+                    }, 
+                    body: JSON.stringify(payload) 
+                }); 
+            } catch(e) {}
         }
 
         async function loadData() {
             try {
-                const response = await fetch(N8N_GET_URL + "?t=" + new Date().getTime());
+                // 🌟 GET 請求帶上暗號 🌟
+                const response = await fetch(N8N_GET_URL + "?t=" + new Date().getTime(), {
+                    headers: { 'X-Garden-Auth': 'mama-2026' }
+                });
                 if (!response.ok) throw new Error("網路回應異常");
                 const data = await response.json();
                 recordsDB = {};
@@ -941,7 +953,14 @@
             if(editingRecordId !== null) payload.id = editingRecordId; 
             document.getElementById('submit-btn').innerText = '儲存中...';
             try {
-                const response = await fetch(N8N_POST_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const response = await fetch(N8N_POST_URL, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Garden-Auth': 'mama-2026' /* 🌟 帶上暗號 🌟 */
+                    }, 
+                    body: JSON.stringify(payload) 
+                });
                 if (response.ok) { 
                     await loadData(); 
                     closeModal('input-modal'); 
