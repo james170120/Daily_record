@@ -232,8 +232,8 @@
 
         /* 草地與網格 */
         #garden-floor {
-            /* 🌟將 top 從 0% 改為 -15%，讓整片草地往上移，成功減少天空面積🌟 */
-            position: absolute; top: -15%; left: -40%; width: 180%; height: 160%;
+            /* 調整 top 往上拉，並增加 height 來補足壓平後的空間 */
+            position: absolute; top: -35%; left: -40%; width: 180%; height: 200%;
             border-radius: 45%; 
             background-color: #8cc474; 
             background-image: 
@@ -241,7 +241,8 @@
                 linear-gradient(90deg, rgba(255,255,255,0.2) 2px, transparent 2px),
                 radial-gradient(circle at 10px 10px, rgba(0,0,0,0.03) 2px, transparent 3px);
             background-size: 8% 8%, 8% 8%, 30px 30px;
-            transform: rotateX(60deg) rotateZ(45deg);
+            /* 🌟 關鍵：將 60deg 改為 72deg，讓草地更貼近平視角 🌟 */
+            transform: rotateX(72deg) rotateZ(45deg);
             transform-style: preserve-3d;
         }
 
@@ -252,13 +253,14 @@
             border-radius: 4px; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
         }
 
-        /* 植物站直與陰影 */
+        /* 花草植物通用設定 (包含背景小草與中央生長區) */
         .garden-item {
-            position: absolute; transform: rotateZ(-45deg) rotateX(-60deg);
+            position: absolute; 
             transform-origin: bottom center; 
-            /* 🌟 將原本生硬且偏移的長陰影，改為正下方極柔和的接地陰影 🌟 */
-            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.15)) contrast(1.1);
-            display: flex; justify-content: center; align-items: flex-end; image-rendering: pixelated;
+            transform: rotateZ(-45deg) rotateX(-72deg);
+            transition: all 0.5s;
+            /* 🌟 再次淡化小花草，透明度降至 0.04 🌟 */
+            text-shadow: -1px 4px 10px rgba(0,0,0,0.04);
         }
         
         /* 小草直接移除陰影，讓草地畫面保持清爽乾淨 */
@@ -266,10 +268,10 @@
         
         /* 左側大樹固定位 */
         .big-tree-25d {
-            font-size: 7rem;
-            transform: rotateZ(-45deg) rotateX(-60deg);
-            /* 🌟 大樹陰影也改為正下方柔和擴散，消除原本的銳利黑影 🌟 */
-            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.25));
+            font-size: 9rem;
+            ttransform: rotateZ(-45deg) rotateX(-72deg);
+            /* 🌟 陰影往樹根收攏，透明度降到極限的 0.02 🌟 */
+            text-shadow: 0px 5px 20px rgba(0,0,0,0.02);
         }
 
         /* =========================================
@@ -1270,29 +1272,32 @@
             document.getElementById('detail-modal').style.display = 'flex';
         }
 
-        // --- 實況天氣系統 (台灣高雄市仁武區) ---
+        // =========================================
+        // 氣象署 CWA 即時天氣 (透過 n8n 安全中繼站)
+        // =========================================
         async function checkRealtimeWeather() {
             try {
-                // 呼叫 Open-Meteo API (仁武區經緯度: 22.70, 120.35)
-                const weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=22.70&longitude=120.35&current=weather_code&timezone=Asia%2FTaipei';
-                const response = await fetch(weatherUrl);
-                const data = await response.json();
+                // 🌟 將這裡替換成你剛剛在 n8n 建立的 Webhook Production URL 🌟
+                const n8nWeatherUrl = 'https://orthodox-oarfish.pikapod.net/webhook/ffaf46df-c23c-4613-8c5b-5095c84da6eas';
                 
-                // WMO 國際天氣代碼：50 以上通常包含毛毛雨、陣雨、暴雨或雷雨
-                const weatherCode = data.current.weather_code;
-                const isRaining = weatherCode >= 50 && weatherCode <= 99;
+                const response = await fetch(n8nWeatherUrl);
+                const data = await response.json();
 
-                // =========================================
-                // 🌟 模擬測試用：強迫下雨 🌟
-                // (測試完畢後，把下一行刪除或註解，就會恢復真實天氣)
-                //const isRaining = true; 
-                // =========================================
-
-                if (isRaining) {
-                    startRainEffect();
+                // 根據 n8n 回傳的 isRaining 決定要不要下雨
+                if (data.isRaining) {
+                    document.getElementById('weather-layer').style.display = 'block';
+                    document.getElementById('sun-icon').style.display = 'none';
+                    console.log("🌧️ 目前仁武區天氣:", data.weather_desc);
+                } else {
+                    document.getElementById('weather-layer').style.display = 'none';
+                    document.getElementById('sun-icon').style.display = 'block';
+                    console.log("☀️ 目前仁武區天氣:", data.weather_desc);
                 }
             } catch (error) {
-                console.log("氣象資料讀取失敗，保持晴天", error);
+                console.error("無法取得天氣資料，維持預設晴天", error);
+                // 發生錯誤時保底顯示晴天
+                document.getElementById('weather-layer').style.display = 'none';
+                document.getElementById('sun-icon').style.display = 'block';
             }
         }
 
