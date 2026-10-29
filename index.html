@@ -355,6 +355,31 @@
         @keyframes pop-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1) translateY(-5px); } }
         .seed-animation { font-size: 4.5rem; margin: 15px auto; animation: pop-bounce 2s infinite ease-in-out; display: flex; justify-content: center; }
 
+        /* ========================================= */
+        /* 🌟 寵物系統專屬樣式 (正式版) 🌟 */
+        /* ========================================= */
+        .garden-item img.pixel-prop {
+            width: 14vw; /* 稍微放大一點點讓狗屋更明顯 */
+            height: auto;
+            user-select: none;
+            pointer-events: none;
+            filter: drop-shadow(0px 2px 1px rgba(0,0,0,0.3));
+        }
+        
+        .garden-item img.pixel-dog {
+            width: 8vw; /* 稍微放大一點點讓小狗更明顯 */
+            height: auto;
+            user-select: none;
+            pointer-events: none;
+            filter: drop-shadow(0px 2px 1px rgba(0,0,0,0.3));
+        }
+
+        .moving-dog {
+            transition: left 3s linear, top 3s linear;
+        }
+
+
+
     </style>
 </head>
 <body>
@@ -416,6 +441,28 @@
             <p style="color: var(--text-muted)">外圍花園總花朵數: <strong id="garden-total-flowers" style="color:var(--primary)">4</strong> 朵</p>
             <div class="progress-bar"><div class="progress-fill" id="game-progress"></div></div>
             <div class="stage-info"><span>種子(0h)</span><span>發芽(2h)</span><span>長葉(4h)</span><span>開花(6h)</span><span>移盆(8h)</span></div>
+            <!-- 🌟 新增：近期通知區塊 (預設隱藏，有通知才會顯示) 🌟 -->
+            <!-- 🌟 新增：成就牆區塊 (預設顯示外框，成就內容動態顯示) 🌟 -->
+            <div id="achievement-wall" style="margin-top: 25px; text-align: left; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                <div style="font-size: 1rem; color: var(--accent); margin-bottom: 15px; font-weight: bold; text-align: center;">🏆 媽媽的專屬成就牆</div>
+                
+                <!-- 寵物成就 (有獲得才會出現) -->
+                <div id="achievement-dog" style="display: none; background: #fff; padding: 12px; border-radius: 10px; border-left: 4px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.02); align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="font-size: 2rem;">🐕</div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: bold; color: var(--text-color);">獲得小柴犬</span>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">連續健康紀錄滿 7 天</span>
+                        </div>
+                    </div>
+                    <span id="achievement-dog-date" style="font-size: 0.75rem; background: var(--warning); color: white; padding: 4px 8px; border-radius: 12px; font-weight: bold;"></span>
+                </div>
+                
+                <!-- 尚未獲得成就時的佔位符 -->
+                <div id="achievement-empty" style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 10px 0;">
+                    持續記錄，解鎖更多驚喜成就！
+                </div>
+            </div>
         </div>
     </div>
 
@@ -544,6 +591,51 @@
                     if(!recordsDB[cleanDate]) recordsDB[cleanDate] = [];
                     recordsDB[cleanDate].push(item);
                 });
+                
+                // =========================================
+                // 🌟 新增：前端自動計算「連續打卡天數」 🌟
+                // =========================================
+                let streak = 0;
+                let checkDate = new Date();
+                let checkStr = getFormattedDate(checkDate);
+                
+                // 寬容機制：如果今天還沒紀錄，那從「昨天」開始檢查，避免一過半夜 12 點連續天數就歸零
+                if (!recordsDB[checkStr]) {
+                    checkDate.setDate(checkDate.getDate() - 1);
+                    checkStr = getFormattedDate(checkDate);
+                }
+                
+                // 只要日期在資料庫裡有找到，天數就 +1，然後日期往前推一天繼續檢查
+                while (recordsDB[checkStr]) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                    checkStr = getFormattedDate(checkDate);
+                }
+                window.consecutiveDays = streak; // 將算好的天數存為全域變數
+                console.log("🎉 目前連續打卡天數:", window.consecutiveDays);
+
+                // =========================================
+                // 🌟 新增：解鎖通知與 localStorage 記憶邏輯 🌟
+                // =========================================
+                // 檢查是否達標 7 天，並且「還沒跳過通知」
+                const hasNotified = localStorage.getItem('dog_unlocked_notified');
+                
+                // 💡 測試小撇步：統一改成 >= 
+                if (window.consecutiveDays >= 7 && !hasNotified) {
+                    const todayDateStr = getFormattedDate(new Date());
+                    // 記錄到本地，保證下次不會再跳
+                    localStorage.setItem('dog_unlocked_notified', 'true');
+                    localStorage.setItem('dog_unlock_date', todayDateStr);
+                    
+                    // 延遲 1.5 秒再跳出，讓媽媽先進來看到漂亮的花園再給驚喜
+                    setTimeout(() => {
+                        document.getElementById('unlock-modal').style.display = 'flex';
+                    }, 1500);
+                }
+                
+                // 🌟 更新成就牆顯示狀態 (修正致命 Bug)
+                updateAchievementWall();
+                // =========================================
                 
                 updateGardenLandscape25D(); 
                 updatePlantLogic();
@@ -829,6 +921,9 @@
                 // 限制天際線：X+Y 小於 36 不種小草 (解決飛天草問題)
                 if ((spot.left + spot.top) < 36) return;
 
+                // 🌟 避開狗屋領地：X 介於 55~70，且 Y 介於 50~65 時跳過不種草 🌟
+                if (spot.left >= 55 && spot.left <= 70 && spot.top >= 50 && spot.top <= 65) return;
+
                 if (Math.random() < 0.55) {
                     const grass = document.createElement('div');
                     grass.className = 'garden-item grass-tuft';
@@ -845,6 +940,78 @@
                     floor.appendChild(grass);
                 }
             });
+
+            // =========================================
+            // 🌟 6. 寵物系統：小狗與狗屋入住 🌟
+            // =========================================
+            
+            // 💡 預覽開關：目前設為 true，所以一進網頁一定會看到小狗。
+            // 等你上傳 GitHub 確認沒問題後，只要把這行改成 const isPreviewDog = false;
+            // 或是整行前面加上 // 註解掉，就會恢復成嚴格的 15 天審查機制！
+            const isPreviewDog = false; 
+
+            // ⚠️ 擷取後端天數資料：
+            // 取得前端剛算好的連續天數
+            const consecutiveDays = window.consecutiveDays || 0;
+
+            // 👑 解鎖條件：只要「開啟預覽」 或 「連續紀錄 >= 15 天」，就讓小狗入住！
+            if (isPreviewDog || consecutiveDays >= 7) {
+                
+                const houseX = 62; 
+                const houseY = 57; 
+
+                // 1. 蓋出狗屋
+                const dogHouse = document.createElement('div');
+                dogHouse.className = 'garden-item';
+                dogHouse.style.left = houseX + '%';
+                dogHouse.style.top = houseY + '%';
+                dogHouse.style.zIndex = Math.floor(houseY * 100 + houseX);
+                dogHouse.innerHTML = `<img src="house.png" class="pixel-prop">`;
+                floor.appendChild(dogHouse);
+
+                // 2. 讓小狗出生在狗屋旁邊
+                let dogX = houseX + 3;
+                let dogY = houseY + 3;
+                const dog = document.createElement('div');
+                dog.className = 'garden-item moving-dog';
+                dog.style.left = dogX + '%';
+                dog.style.top = dogY + '%';
+                dog.style.zIndex = Math.floor(dogY * 100 + dogX);
+
+                const dogImg = document.createElement('img');
+                dogImg.src = 'dog_left.png'; 
+                dogImg.className = 'pixel-dog';
+                dog.appendChild(dogImg);
+                floor.appendChild(dog);
+
+                // 3. 啟動狗狗的漫步 AI (2.5D 十字走位法)
+                if (window.dogWalkTimer) clearInterval(window.dogWalkTimer);
+                window.dogWalkTimer = setInterval(() => {
+                    let targetX = dogX;
+                    let targetY = dogY;
+
+                    if (Math.random() < 0.5) {
+                        targetX = houseX + (Math.random() * 16 - 8);
+                        let diffX = targetX - dogX;
+                        if (diffX > 0) dogImg.src = 'dog_right.png'; 
+                        else dogImg.src = 'dog_left.png';  
+                    } else {
+                        targetY = houseY + (Math.random() * 16 - 8);
+                        let diffY = targetY - dogY;
+                        if (diffY > 0) dogImg.src = 'dog_down.png';  
+                        else dogImg.src = 'dog_up.png';    
+                    }
+
+                    dogX = targetX;
+                    dogY = targetY;
+                    dog.style.left = dogX + '%';
+                    dog.style.top = dogY + '%';
+                    dog.style.zIndex = Math.floor(dogY * 100 + dogX);
+                }, 4000); 
+            }
+
+
+
 
             // 5. 獎勵機制：保底生態 + 根據近 3 天紀錄動態累加蝴蝶與蜜蜂
             const wrapper = document.getElementById('garden-floor-wrapper');
@@ -1213,6 +1380,27 @@
         // 系統啟動，檢查天氣與讀取資料
         checkRealtimeWeather();
         loadData();
+
+
+        // 🌟 更新成就牆的顯示狀態
+        function updateAchievementWall() {
+            const hasNotified = localStorage.getItem('dog_unlocked_notified');
+            const unlockDate = localStorage.getItem('dog_unlock_date');
+            
+            const achievementDog = document.getElementById('achievement-dog');
+            const achievementEmpty = document.getElementById('achievement-empty');
+            
+            if (hasNotified) {
+                if (achievementDog) {
+                    achievementDog.style.display = 'flex'; // 顯示小狗成就
+                    document.getElementById('achievement-dog-date').innerText = unlockDate || '最近';
+                }
+                if (achievementEmpty) achievementEmpty.style.display = 'none'; // 隱藏空提示
+            }
+        }
+
+
+
     </script>
 
     <!-- 🌟 自訂成功提示彈窗 (取代原本的 alert) 🌟 -->
@@ -1225,6 +1413,21 @@
             <button class="submit-btn" onclick="closeModal('success-modal')" style="margin-top: 20px; width: 100%;">太棒了</button>
         </div>
     </div>
+
+    <!-- 🌟 專屬成就解鎖通知 Modal 🌟 -->
+    <div id="unlock-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <h2 style="color: var(--warning); margin-top: 0;">🎉 恭喜達成里程碑！</h2>
+            <div style="font-size: 4rem; margin: 10px 0;">🐕🏡</div>
+            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">
+                太棒了！妳已經連續健康紀錄 <strong>7</strong> 天囉！<br><br>
+                為了獎勵妳的持之以恆，花園裡搬來了一位新朋友。快去草地上找找專屬於妳的「小柴犬與狗屋」吧！
+            </p>
+            <button class="submit-btn" onclick="closeModal('unlock-modal')" style="margin-top: 20px; width: 100%;">去看看新朋友</button>
+        </div>
+    </div>
+
+
 
 </body>
 </html>
