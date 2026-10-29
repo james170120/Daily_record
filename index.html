@@ -367,7 +367,7 @@
         }
         
         .garden-item img.pixel-dog {
-            width: 8vw; /* 稍微放大一點點讓小狗更明顯 */
+            width: 7vw; /* 稍微放大一點點讓小狗更明顯 */
             height: auto;
             user-select: none;
             pointer-events: none;
@@ -377,6 +377,41 @@
         .moving-dog {
             transition: left 3s linear, top 3s linear;
         }
+
+
+        .garden-item img.pixel-flower {
+            width: 8vw; /* 花朵的大小，可自行增減微調 */
+            height: auto;
+            user-select: none;
+            pointer-events: none;
+            filter: drop-shadow(0px 2px 1px rgba(0,0,0,0.3));
+        }
+
+        /* =========================================
+           🏆 成就圖鑑專屬樣式
+           ========================================= */
+        .gallery-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;
+        }
+        .gallery-item {
+            background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 5px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); aspect-ratio: 1;
+        }
+        .gallery-item img {
+            width: 80%; height: 80%; object-fit: contain; margin-bottom: 5px;
+        }
+        .gallery-item-name {
+            font-size: 0.65rem; color: var(--text-color); text-align: center; white-space: nowrap; font-weight: bold;
+        }
+        /* 🔒 鎖定狀態：灰黑輪廓與淡色文字 */
+        .gallery-item.locked { background: rgba(0,0,0,0.02); border-style: dashed; }
+        .gallery-item.locked img {
+            /* 這一行會把圖片變成深灰色的純輪廓！ */
+            filter: brightness(0) opacity(0.2); 
+        }
+        .gallery-item.locked .gallery-item-name { color: var(--text-muted); font-weight: normal; }
+
 
 
 
@@ -441,28 +476,21 @@
             <p style="color: var(--text-muted)">外圍花園總花朵數: <strong id="garden-total-flowers" style="color:var(--primary)">4</strong> 朵</p>
             <div class="progress-bar"><div class="progress-fill" id="game-progress"></div></div>
             <div class="stage-info"><span>種子(0h)</span><span>發芽(2h)</span><span>長葉(4h)</span><span>開花(6h)</span><span>移盆(8h)</span></div>
-            <!-- 🌟 新增：近期通知區塊 (預設隱藏，有通知才會顯示) 🌟 -->
-            <!-- 🌟 新增：成就牆區塊 (預設顯示外框，成就內容動態顯示) 🌟 -->
-            <div id="achievement-wall" style="margin-top: 25px; text-align: left; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                <div style="font-size: 1rem; color: var(--accent); margin-bottom: 15px; font-weight: bold; text-align: center;">🏆 媽媽的專屬成就牆</div>
+          
+            <!-- 🌟 佈告欄 (已修正命名與結構，改為動態容器) 🌟 -->
+            <div id="notice-board" style="margin-top: 20px; text-align: left; background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                <div style="font-size: 0.95rem; color: var(--accent); margin-bottom: 10px; font-weight: bold; text-align: center;">📋 佈告欄</div>
                 
-                <!-- 寵物成就 (有獲得才會出現) -->
-                <div id="achievement-dog" style="display: none; background: #fff; padding: 12px; border-radius: 10px; border-left: 4px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.02); align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div style="font-size: 2rem;">🐕</div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="font-weight: bold; color: var(--text-color);">獲得小柴犬</span>
-                            <span style="font-size: 0.8rem; color: var(--text-muted);">連續健康紀錄滿 7 天</span>
-                        </div>
-                    </div>
-                    <span id="achievement-dog-date" style="font-size: 0.75rem; background: var(--warning); color: white; padding: 4px 8px; border-radius: 12px; font-weight: bold;"></span>
-                </div>
+                <!-- 負責裝載所有通知 (小狗、新花朵) 的容器 -->
+                <div id="notice-list"></div>
                 
-                <!-- 尚未獲得成就時的佔位符 -->
-                <div id="achievement-empty" style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 10px 0;">
-                    持續記錄，解鎖更多驚喜成就！
-                </div>
+                <div id="notice-empty" style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 8px 0;">目前無新公告</div>
             </div>
+
+            <!-- 🌟 新增：成就圖鑑按鈕 🌟 -->
+            <button class="submit-btn" onclick="openGalleryModal()" style="width: 100%; margin-top: 15px; background: var(--warning); box-shadow: 0 4px 10px rgba(243, 156, 18, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                🏆 查看成就圖鑑
+            </button>
         </div>
     </div>
 
@@ -519,6 +547,57 @@
             <button class="close-btn" onclick="closeModal('detail-modal')">關閉明細</button>
         </div>
     </div>
+
+
+    <!-- 🌟 自訂成功提示彈窗 (取代原本的 alert) 🌟 -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <h2 style="color: var(--primary); margin-top: 0;">🎉 紀錄成功！</h2>
+            <p id="success-message" style="color: var(--text-color); font-size: 1.05rem; margin: 15px 0; line-height: 1.5;"></p>
+            <div class="seed-animation">🌰</div>
+            <p style="color: var(--accent); font-size: 1.1rem; font-weight: bold;">你獲得了一顆新種子！</p>
+            <button class="submit-btn" onclick="closeModal('success-modal')" style="margin-top: 20px; width: 100%;">太棒了</button>
+        </div>
+    </div>
+
+    <!-- 🌟 專屬成就解鎖通知 Modal 🌟 -->
+    <div id="unlock-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <h2 style="color: var(--warning); margin-top: 0;">🎉 恭喜達成里程碑！</h2>
+            <div style="font-size: 4rem; margin: 10px 0;">🐕🏡</div>
+            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">
+                太棒了！妳已經連續健康紀錄 <strong>7</strong> 天囉！<br><br>
+                為了獎勵妳的持之以恆，花園裡搬來了一位新朋友。快去草地上找找專屬於妳的「小柴犬與狗屋」吧！
+            </p>
+            <button class="submit-btn" onclick="closeModal('unlock-modal')" style="margin-top: 20px; width: 100%;">去看看新朋友</button>
+        </div>
+    </div>
+
+    <!-- 🌟 成就圖鑑 Modal 🌟 -->
+    <div id="gallery-modal" class="modal">
+        <div class="modal-content" style="max-height: 90vh; padding: 20px 15px; width: 95%;">
+            <div class="modal-header" style="text-align: center; font-size: 1.3rem;">🏆 收集圖鑑</div>
+            
+            <div style="overflow-y: auto; padding: 5px; margin-bottom: 10px; overflow-x: hidden;">
+                <!-- 寵物區 -->
+                <div class="section-title" style="margin-top: 0;">🐕 寵物夥伴</div>
+                <div id="gallery-pets" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px;">
+                    <!-- JS 動態產生 -->
+                </div>
+
+                <!-- 花朵區 -->
+                <div class="section-title">🌸 花朵圖鑑 (<span id="gallery-flower-count">0/24</span>)</div>
+                <div id="gallery-flowers" class="gallery-grid">
+                    <!-- JS 動態產生 -->
+                </div>
+            </div>
+
+            <button class="close-btn" onclick="closeModal('gallery-modal')" style="width: 100%;">關閉圖鑑</button>
+        </div>
+    </div>
+
+
+
 
     <script>
         // API 連結
@@ -633,9 +712,13 @@
                     }, 1500);
                 }
                 
-                // 🌟 更新成就牆顯示狀態 (修正致命 Bug)
-                updateAchievementWall();
+                // 🌟 更新佈告欄顯示狀態
+                updateNoticeBoard();
                 // =========================================
+
+
+
+
                 
                 updateGardenLandscape25D(); 
                 updatePlantLogic();
@@ -661,7 +744,9 @@
         // 點擊背景關閉視窗邏輯
         document.getElementById('input-modal').addEventListener('click', function(e) { if(e.target===this) this.style.display='none'; });
         document.getElementById('detail-modal').addEventListener('click', function(e) { if(e.target===this) this.style.display='none'; });
-        
+        document.getElementById('gallery-modal').addEventListener('click', function(e) { if(e.target===this) this.style.display='none'; });
+
+
         ['page-record', 'page-plant', 'page-calendar'].forEach(pageId => {
             document.getElementById(pageId).addEventListener('click', function(e) { 
                 if (e.target === this) closeOverlay(pageId); 
@@ -714,11 +799,68 @@
             //gardenFlowerCount = 400; 
             // =========================================
 
-            const collectedPlants = [];
-            for(let i = 0; i < gardenFlowerCount; i++) {
-                collectedPlants.push(fiveYearPlants[i % fiveYearPlants.length]);
+            // =========================================
+            // 🌟 抽卡系統：95% 舊花、5% 新花 🌟
+            // =========================================
+            // 1. 建立 24 種花的全英文檔名清單 (完全對齊你的實際檔案)
+            const allFlowers = [
+                'flower_camellia.png', 'flower_carnation.png', 'flower_cherryblossom.png', 
+                'flower_chrysanthemum.png', 'flower_daffodil.png', 'flower_daisy.png', 
+                'flower_dandelion.png', 'flower_hibiscus.png', 'flower_hydrangea.png', 
+                'flower_iris.png', 'flower_jasmine.png', 'flower_lavender.png', 
+                'flower_lily.png', 'flower_lotus.png', 'flower_magnolia.png', 
+                'flower_marigold.png', 'flower_morningglory.png', 'flower_orchid.png', 
+                'flower_peony.png', 'flower_poppy.png', 'flower_rose.png', 
+                'flower_sunflower.png', 'flower_tulip.png', 'flower_violet.png'
+            ];
+            
+            // 2. 從記憶體讀取「已解鎖圖鑑」與「花園植物排程」
+            // 預設解鎖 4 種經典花朵：玫瑰、向日葵、鬱金香、雛菊
+            let unlockedFlowers = JSON.parse(localStorage.getItem('unlocked_flowers')) || [
+                'flower_rose.png', 'flower_sunflower.png', 'flower_tulip.png', 'flower_daisy.png'
+            ];
+            let gardenFlowerList = JSON.parse(localStorage.getItem('garden_flower_list')) || [];
+            
+            // 3. 算出還有哪些花「沒種過」 (鎖定中的名單)
+            let lockedFlowers = allFlowers.filter(f => !unlockedFlowers.includes(f));
+
+            // 4. 當花園的總花數 (gardenFlowerCount) 增加時，啟動抽卡機制補足差額
+            while (gardenFlowerList.length < gardenFlowerCount) {
+                let chosenFlower = '';
+                
+                // 骰出 0.0 ~ 1.0 的隨機數字。如果 < 0.05 (5% 機率) 且還有未解鎖的花：
+                if (lockedFlowers.length > 0 && Math.random() < 0.05) {
+                    // 從鎖定名單隨機挑選一朵
+                    let randomIndex = Math.floor(Math.random() * lockedFlowers.length);
+                    chosenFlower = lockedFlowers[randomIndex];
+                    
+                    // 從鎖定名單移除，並加入已解鎖名單
+                    lockedFlowers.splice(randomIndex, 1);
+                    unlockedFlowers.push(chosenFlower);
+                    localStorage.setItem('unlocked_flowers', JSON.stringify(unlockedFlowers));
+                    // 🌟 記錄最新獲得的花朵，供佈告欄顯示 🌟
+                    const todayStr = getFormattedDate(new Date());
+                    localStorage.setItem('latest_unlocked_flower', JSON.stringify({ file: chosenFlower, date: todayStr }));
+                    console.log("🎉 解鎖新花朵！", chosenFlower);
+                } else {
+                    // 95% 機率：從「已經解鎖」的名單中隨機挑選一朵
+                    let randomIndex = Math.floor(Math.random() * unlockedFlowers.length);
+                    chosenFlower = unlockedFlowers[randomIndex];
+                }
+                // 將抽到的花放進花園排程表
+                gardenFlowerList.push(chosenFlower);
             }
             
+            // 將最新抽完的排程存起來，確保每次重整網頁時，舊花的位置與種類不會亂跳
+            localStorage.setItem('garden_flower_list', JSON.stringify(gardenFlowerList));
+
+            // 擷取目前花園需要的數量
+            const collectedPlants = gardenFlowerList.slice(0, gardenFlowerCount);
+
+            
+            
+
+
             const displayGrowings = growingPlants.slice(-16);
             
             // 🌟 1. 生長區往上移動一格 (中心點從 9,10 改為 8,9) 🌟
@@ -865,10 +1007,13 @@
                 const pastPlant = document.createElement('div');
                 pastPlant.className = 'garden-item';
                 const delay = (Math.random() * -7).toFixed(2);
-                pastPlant.innerHTML = `<span class="swaying-plant" style="animation-delay: ${delay}s">${flower}</span>`;
+                
+                // 🌟 改為使用 img 標籤來載入真實圖片，並套用剛剛寫的 pixel-flower 類別 🌟
+                pastPlant.innerHTML = `<img src="${flower}" class="swaying-plant pixel-flower" style="animation-delay: ${delay}s">`;
+                
                 pastPlant.style.left = spot.left + '%';
                 pastPlant.style.top = spot.top + '%';
-                pastPlant.style.fontSize = (1.0 + Math.random() * 0.3) + 'rem';
+                // (因為圖片解析度固定，我們不需要像 Emoji 一樣隨機改變 fontSize 了，故刪除 fontSize 設定)
                 pastPlant.style.zIndex = Math.floor(spot.top * 100 + spot.left); 
                 floor.appendChild(pastPlant);
             });
@@ -1382,51 +1527,139 @@
         loadData();
 
 
-        // 🌟 更新成就牆的顯示狀態
-        function updateAchievementWall() {
-            const hasNotified = localStorage.getItem('dog_unlocked_notified');
-            const unlockDate = localStorage.getItem('dog_unlock_date');
+        // 🌟 更新佈告欄顯示狀態 (小狗與最新花朵 - 緊湊排版版)
+        function updateNoticeBoard() {
+            const hasDog = localStorage.getItem('dog_unlocked_notified');
+            const unlockDogDate = localStorage.getItem('dog_unlock_date');
+            const latestFlowerStr = localStorage.getItem('latest_unlocked_flower'); 
             
-            const achievementDog = document.getElementById('achievement-dog');
-            const achievementEmpty = document.getElementById('achievement-empty');
+            const noticeList = document.getElementById('notice-list');
+            const noticeEmpty = document.getElementById('notice-empty');
             
-            if (hasNotified) {
-                if (achievementDog) {
-                    achievementDog.style.display = 'flex'; // 顯示小狗成就
-                    document.getElementById('achievement-dog-date').innerText = unlockDate || '最近';
-                }
-                if (achievementEmpty) achievementEmpty.style.display = 'none'; // 隱藏空提示
+            let noticesHTML = '';
+            
+            // 1. 小狗入住通知 (縮小圖示為 1.2rem，字體等比例縮小)
+            if (hasDog) {
+                noticesHTML += `
+                <div style="background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid var(--warning); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="font-size: 1.2rem;">🐕</div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">獲得小柴犬</span>
+                            <span style="font-size: 0.65rem; color: var(--text-muted);">連續紀錄滿 7 天</span>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.65rem; background: var(--warning); color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${unlockDogDate || '最近'}</span>
+                </div>`;
+            }
+
+            // 2. 最新解鎖花朵通知 (縮小圖片為 1.2rem)
+            if (latestFlowerStr) {
+                const latestFlower = JSON.parse(latestFlowerStr);
+                const flowerDic = {
+                    'flower_camellia.png': '山茶花', 'flower_carnation.png': '康乃馨', 'flower_cherryblossom.png': '櫻花',
+                    'flower_chrysanthemum.png': '菊花', 'flower_daffodil.png': '水仙', 'flower_daisy.png': '雛菊',
+                    'flower_dandelion.png': '蒲公英', 'flower_hibiscus.png': '扶桑花', 'flower_hydrangea.png': '繡球花',
+                    'flower_iris.png': '鳶尾花', 'flower_jasmine.png': '茉莉花', 'flower_lavender.png': '薰衣草',
+                    'flower_lily.png': '百合', 'flower_lotus.png': '蓮花', 'flower_magnolia.png': '木蘭花',
+                    'flower_marigold.png': '萬壽菊', 'flower_morningglory.png': '牽牛花', 'flower_orchid.png': '蘭花',
+                    'flower_peony.png': '牡丹', 'flower_poppy.png': '罌粟花', 'flower_rose.png': '玫瑰',
+                    'flower_sunflower.png': '向日葵', 'flower_tulip.png': '鬱金香', 'flower_violet.png': '紫羅蘭'
+                };
+                const fName = flowerDic[latestFlower.file] || '新圖鑑';
+                
+                noticesHTML += `
+                <div style="background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <img src="${latestFlower.file}" style="width: 1.2rem; height: 1.2rem; object-fit: contain; filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.2));">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">發現 ${fName}！</span>
+                            <span style="font-size: 0.65rem; color: var(--text-muted);">花園出現新種子</span>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.65rem; background: var(--primary); color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${latestFlower.date || '最近'}</span>
+                </div>`;
+            }
+
+            // 判斷要顯示通知清單，還是顯示「無新公告」
+            if (noticesHTML !== '') {
+                noticeList.innerHTML = noticesHTML;
+                noticeList.style.display = 'block';
+                if (noticeEmpty) noticeEmpty.style.display = 'none';
+            } else {
+                noticeList.style.display = 'none';
+                if (noticeEmpty) noticeEmpty.style.display = 'block';
             }
         }
 
 
+        // =========================================
+        // 🌟 打開成就圖鑑 Modal 與算繪邏輯
+        // =========================================
+        function openGalleryModal() {
+            // 24 種花的中英文對照表 (已同步更新大小寫與空白)
+            const flowerDic = {
+                'flower_camellia.png': '山茶花', 'flower_carnation.png': '康乃馨', 'flower_cherryblossom.png': '櫻花',
+                'flower_chrysanthemum.png': '菊花', 'flower_daffodil.png': '水仙', 'flower_daisy.png': '雛菊',
+                'flower_dandelion.png': '蒲公英', 'flower_hibiscus.png': '扶桑花', 'flower_hydrangea.png': '繡球花',
+                'flower_iris.png': '鳶尾花', 'flower_jasmine.png': '茉莉花', 'flower_lavender.png': '薰衣草',
+                'flower_lily.png': '百合', 'flower_lotus.png': '蓮花', 'flower_magnolia.png': '木蘭花',
+                'flower_marigold.png': '萬壽菊', 'flower_morningglory.png': '牽牛花', 'flower_orchid.png': '蘭花',
+                'flower_peony.png': '牡丹', 'flower_poppy.png': '罌粟花', 'flower_rose.png': '玫瑰',
+                'flower_sunflower.png': '向日葵', 'flower_tulip.png': '鬱金香', 'flower_violet.png': '紫羅蘭'
+            };
+
+            const allFlowersList = Object.keys(flowerDic);
+            
+            // 抓取解鎖狀態
+            let unlockedFlowers = JSON.parse(localStorage.getItem('unlocked_flowers')) || [
+                'flower_rose.png', 'flower_sunflower.png', 'flower_tulip.png', 'flower_daisy.png'
+            ];
+            const hasDog = localStorage.getItem('dog_unlocked_notified') === 'true';
+
+            // 1. 產生寵物區塊 HTML
+            const petContainer = document.getElementById('gallery-pets');
+            petContainer.innerHTML = `
+                <div class="gallery-item ${hasDog ? '' : 'locked'}">
+                    <img src="house.png">
+                    <div class="gallery-item-name">${hasDog ? '溫馨狗屋' : '???'}</div>
+                </div>
+                <div class="gallery-item ${hasDog ? '' : 'locked'}">
+                    <img src="dog_down.png">
+                    <div class="gallery-item-name">${hasDog ? '小柴犬' : '???'}</div>
+                </div>
+            `;
+
+            // 2. 產生花朵區塊 HTML
+            const flowerContainer = document.getElementById('gallery-flowers');
+            let flowerHTML = '';
+            
+            allFlowersList.forEach((f) => {
+                const isUnlocked = unlockedFlowers.includes(f);
+                const displayName = isUnlocked ? flowerDic[f] : '???';
+                
+                flowerHTML += `
+                    <div class="gallery-item ${isUnlocked ? '' : 'locked'}">
+                        <img src="${f}">
+                        <div class="gallery-item-name">${displayName}</div>
+                    </div>
+                `;
+            });
+            flowerContainer.innerHTML = flowerHTML;
+            
+            // 更新收集進度
+            document.getElementById('gallery-flower-count').innerText = `${unlockedFlowers.length}/24`;
+
+            // 顯示 Modal
+            document.getElementById('gallery-modal').style.display = 'flex';
+        }
+
+
+        
 
     </script>
 
-    <!-- 🌟 自訂成功提示彈窗 (取代原本的 alert) 🌟 -->
-    <div id="success-modal" class="modal">
-        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
-            <h2 style="color: var(--primary); margin-top: 0;">🎉 紀錄成功！</h2>
-            <p id="success-message" style="color: var(--text-color); font-size: 1.05rem; margin: 15px 0; line-height: 1.5;"></p>
-            <div class="seed-animation">🌰</div>
-            <p style="color: var(--accent); font-size: 1.1rem; font-weight: bold;">你獲得了一顆新種子！</p>
-            <button class="submit-btn" onclick="closeModal('success-modal')" style="margin-top: 20px; width: 100%;">太棒了</button>
-        </div>
-    </div>
-
-    <!-- 🌟 專屬成就解鎖通知 Modal 🌟 -->
-    <div id="unlock-modal" class="modal">
-        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
-            <h2 style="color: var(--warning); margin-top: 0;">🎉 恭喜達成里程碑！</h2>
-            <div style="font-size: 4rem; margin: 10px 0;">🐕🏡</div>
-            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">
-                太棒了！妳已經連續健康紀錄 <strong>7</strong> 天囉！<br><br>
-                為了獎勵妳的持之以恆，花園裡搬來了一位新朋友。快去草地上找找專屬於妳的「小柴犬與狗屋」吧！
-            </p>
-            <button class="submit-btn" onclick="closeModal('unlock-modal')" style="margin-top: 20px; width: 100%;">去看看新朋友</button>
-        </div>
-    </div>
-
+    
 
 
 </body>
