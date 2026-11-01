@@ -409,7 +409,26 @@
         .gallery-item.locked { background: rgba(0,0,0,0.02); border-style: dashed; }
         .gallery-item.locked img { filter: brightness(0) opacity(0.2); }
         .gallery-item.locked .gallery-item-name { color: var(--text-muted); font-weight: normal; }
-
+        
+        /* 🌟 寵物橫向滑動容器專屬樣式 🌟 */
+        .pet-scroll-container {
+            display: flex; 
+            gap: 10px; 
+            overflow-x: auto; 
+            padding: 2px 0px 10px 0px; /* 🌟 左右都給 5px 的安全距離，防止切邊 */
+            margin-bottom: 15px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch; 
+        }
+        /* 隱藏橫向捲軸讓畫面更乾淨 */
+        .pet-scroll-container::-webkit-scrollbar { display: none; }
+        .pet-scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 確保每個寵物卡片大小固定，不會被擠壓 */
+        .pet-scroll-container .gallery-item {
+            flex: 0 0 85px; 
+            scroll-snap-align: start;
+        }
 
 
 
@@ -479,11 +498,20 @@
             
             <div class="pot-scene" onclick="cyclePlantStatus()">
                 <div class="soil-patch"></div>
-                <div class="plant-avatar" id="plant-avatar">💤</div>
+                <div class="plant-avatar" id="plant-avatar" style="font-size: 4rem;">💤</div>
             </div>
             
+            
             <h3 id="plant-stage-text">生長區目前休息中</h3>
-            <p style="color: var(--text-muted)">外圍花園總花朵數: <strong id="garden-total-flowers" style="color:var(--primary)">4</strong> 朵</p>
+            <p style="color: var(--text-muted); margin-bottom: 5px;">外圍花園總花朵數: <strong id="garden-total-flowers" style="color:var(--primary)">4</strong> 朵</p>
+            
+            <!-- 🌟 修改：分別顯示蝴蝶與蜜蜂數量統計 🌟 -->
+            <p style="color: var(--text-muted); margin-top: 0; font-size: 0.85rem;">
+                花園生態: 
+                <strong id="count-butterfly" style="color: #9b59b6;">2</strong> 隻🦋 ＆ 
+                <strong id="count-bee" style="color: var(--warning);">2</strong> 隻🐝
+            </p>
+
             <div class="progress-bar"><div class="progress-fill" id="game-progress"></div></div>
             <div class="stage-info"><span>種子(0h)</span><span>發芽(2h)</span><span>長葉(4h)</span><span>開花(6h)</span><span>移盆(8h)</span></div>
           
@@ -583,6 +611,22 @@
         </div>
     </div>
 
+    <!-- 🌟 德國牧羊犬 30 天成就解鎖 Modal 🌟 -->
+    <div id="unlock-gs-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <h2 style="color: var(--danger); margin-top: 0;">🏆 終極里程碑達成！</h2>
+            <div style="display: flex; justify-content: center; gap: 10px; margin: 15px 0;">
+                <img src="german_shepherd_house.png" style="width: 4rem; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.2));">
+                <img src="german_shepherd_bottom_left.png" style="width: 4rem; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.2));">
+            </div>
+            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">
+                太不可思議了！妳已經連續健康紀錄 <strong>30</strong> 天囉！<br><br>
+                為了守護妳無與倫比的毅力，一隻忠誠的「德國牧羊犬」已經搬進花園裡，隨時準備陪妳繼續邁向下一個月！
+            </p>
+            <button class="submit-btn" onclick="closeModal('unlock-gs-modal')" style="background: var(--danger); box-shadow: 0 4px 10px rgba(231,76,60,0.4); margin-top: 20px; width: 100%;">熱烈歡迎新夥伴</button>
+        </div>
+    </div>
+
     <!-- 🌟 成就圖鑑 Modal 🌟 -->
     <div id="gallery-modal" class="modal">
         <div class="modal-content" style="max-height: 90vh; padding: 20px 15px; width: 95%;">
@@ -622,6 +666,10 @@
         let currentViewingIndex = 0;
 
         const startYear = 2026;
+
+        // 🌟 將預覽開關移到全域變數，這樣所有函數都讀得到！🌟
+        // 只要把這行改成 const isPreviewDog = false;
+        const isPreviewDog = false; // true: 預覽模式，會直接顯示小狗與狗屋，方便測試；false: 正式模式，需達成條件才會出現
         
         const fiveYearPlants = [
             '🌻', '🌷', '🌹', '🪻',
@@ -632,7 +680,7 @@
         
         function getFormattedDate(dateObj) { return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`; }
 
-        // --- 真實月相運算 (依據新月週期 29.530588天) ---
+        // --- 真實月相運算 (14 階段 SVG 精細漸層版，去除系統醜陋暗部) ---
         function getRealMoonPhase(date) {
             let year = date.getFullYear(); let month = date.getMonth() + 1; let day = date.getDate();
             if (month < 3) { year--; month += 12; } ++month;
@@ -640,15 +688,48 @@
             let phase = jd / 29.5305882;
             let cycle = phase - Math.floor(phase); 
             
-            if (cycle < 0.05) return '🌑';      
-            else if (cycle < 0.2) return '🌒'; 
-            else if (cycle < 0.3) return '🌓'; 
-            else if (cycle < 0.45) return '🌔';
-            else if (cycle < 0.55) return '🌕';
-            else if (cycle < 0.7) return '🌖'; 
-            else if (cycle < 0.8) return '🌗'; 
-            else if (cycle < 0.95) return '🌘';
-            return '🌑';
+            // 設定月亮的大小與漸層發光色
+            const moonStyle = `width: 3.5rem; height: 3.5rem; vertical-align: middle;`;
+            const svgStart = `<svg viewBox="0 0 100 100" style="${moonStyle}">`;
+            const svgEnd = `</svg>`;
+            const defs = `<defs><linearGradient id="moonGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFF8D6"/><stop offset="100%" stop-color="#FFD54F"/></linearGradient></defs>`;
+            const fill = `fill="url(#moonGrad)"`;
+
+            let path = '';
+            // 透過 SVG 貝茲曲線精準刻畫 14 階段 (6盈 + 1滿 + 6虧 + 1朔)
+            if (cycle < 0.03) {
+                path = `<circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>`; // 朔月 (微弱光圈)
+            } else if (cycle < 0.10) { 
+                path = `<path d="M50,2 A48,48 0 0,1 50,98 A38,48 0 0,0 50,2" ${fill}/>`; // 眉月 (極細右)
+            } else if (cycle < 0.17) { 
+                path = `<path d="M50,2 A48,48 0 0,1 50,98 A22,48 0 0,0 50,2" ${fill}/>`; // 眉月 (稍粗右)
+            } else if (cycle < 0.25) { 
+                path = `<path d="M50,2 A48,48 0 0,1 50,98 L50,2" ${fill}/>`; // 上弦月 (右半圓)
+            } else if (cycle < 0.33) { 
+                path = `<path d="M50,2 A48,48 0 0,1 50,98 A18,48 0 0,1 50,2" ${fill}/>`; // 盈凸月 (微凸右)
+            } else if (cycle < 0.40) { 
+                path = `<path d="M50,2 A48,48 0 0,1 50,98 A32,48 0 0,1 50,2" ${fill}/>`; // 盈凸月 (中凸右)
+            } else if (cycle < 0.47) { 
+                path = `<path d="M50,2 A48,48 0 0,1 50,98 A44,48 0 0,1 50,2" ${fill}/>`; // 盈凸月 (大凸右)
+            } else if (cycle < 0.53) { 
+                path = `<circle cx="50" cy="50" r="48" ${fill}/>`; // 滿月
+            } else if (cycle < 0.60) { 
+                path = `<path d="M50,2 A48,48 0 0,0 50,98 A44,48 0 0,0 50,2" ${fill}/>`; // 虧凸月 (大凸左)
+            } else if (cycle < 0.67) { 
+                path = `<path d="M50,2 A48,48 0 0,0 50,98 A32,48 0 0,0 50,2" ${fill}/>`; // 虧凸月 (中凸左)
+            } else if (cycle < 0.75) { 
+                path = `<path d="M50,2 A48,48 0 0,0 50,98 A18,48 0 0,0 50,2" ${fill}/>`; // 虧凸月 (微凸左)
+            } else if (cycle < 0.83) { 
+                path = `<path d="M50,2 A48,48 0 0,0 50,98 L50,2" ${fill}/>`; // 下弦月 (左半圓)
+            } else if (cycle < 0.90) { 
+                path = `<path d="M50,2 A48,48 0 0,0 50,98 A22,48 0 0,1 50,2" ${fill}/>`; // 殘月 (稍粗左)
+            } else if (cycle < 0.97) { 
+                path = `<path d="M50,2 A48,48 0 0,0 50,98 A38,48 0 0,1 50,2" ${fill}/>`; // 殘月 (極細左)
+            } else { 
+                path = `<circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>`; // 朔月
+            }
+
+            return svgStart + defs + path + svgEnd;
         }
 
         async function sendErrorLog(errorMsg) {
@@ -720,7 +801,19 @@
                     setTimeout(() => {
                         document.getElementById('unlock-modal').style.display = 'flex';
                     }, 1500);
+                // 🌟 新增：德國牧羊犬 30 天解鎖條件 🌟
+                const hasGsNotified = localStorage.getItem('gs_unlocked_notified');
+                if (window.consecutiveDays >= 30 && !hasGsNotified) {
+                    const todayDateStr = getFormattedDate(new Date());
+                    localStorage.setItem('gs_unlocked_notified', 'true');
+                    localStorage.setItem('gs_unlock_date', todayDateStr);
+                    setTimeout(() => {
+                        document.getElementById('unlock-gs-modal').style.display = 'flex';
+                    }, 1500);
                 }
+                
+                }
+                
                 
                 // 🌟 更新佈告欄顯示狀態
                 updateNoticeBoard();
@@ -893,7 +986,7 @@
             
             const celestial = document.createElement('div');
             celestial.className = 'celestial-body';
-            celestial.innerText = isDay ? '☀️' : getRealMoonPhase(now);
+            celestial.innerHTML = isDay ? '☀️' : getRealMoonPhase(now);
             sky.appendChild(celestial);
 
             for(let i=0; i<4; i++) {
@@ -1081,6 +1174,9 @@
                 // 🌟 避開狗屋領地：X 介於 55~70，且 Y 介於 50~65 時跳過不種草 🌟
                 if (spot.left >= 55 && spot.left <= 70 && spot.top >= 50 && spot.top <= 65) return;
 
+                // 🌟 新增：避開德牧領地 (左下角)：X 介於 15~35，且 Y 介於 50~70 時跳過不種草 🌟
+                if (spot.left >= 15 && spot.left <= 35 && spot.top >= 50 && spot.top <= 70) return;
+
                 if (Math.random() < 0.55) {
                     const grass = document.createElement('div');
                     grass.className = 'garden-item grass-tuft';
@@ -1102,10 +1198,7 @@
             // 🌟 6. 寵物系統：小狗與狗屋入住 🌟
             // =========================================
             
-            // 💡 預覽開關：目前設為 true，所以一進網頁一定會看到小狗。
-            // 等你上傳 GitHub 確認沒問題後，只要把這行改成 const isPreviewDog = false;
-            // 或是整行前面加上 // 註解掉，就會恢復成嚴格的 15 天審查機制！
-            const isPreviewDog = false; 
+             
 
             // ⚠️ 擷取後端天數資料：
             // 取得前端剛算好的連續天數
@@ -1165,23 +1258,85 @@
                     dog.style.top = dogY + '%';
                     dog.style.zIndex = Math.floor(dogY * 100 + dogX);
                 }, 4000); 
+
+            // =========================================
+            // 🌟 7. 寵物系統 (進階)：德國牧羊犬與專屬犬舍 (30天解鎖) 🌟
+            // =========================================
+            if (isPreviewDog || consecutiveDays >= 30) {
+                // 🌟 新座標：柴犬左側，做鄰居
+                const gsHouseX = 54; 
+                const gsHouseY = 57; 
+
+                // 1. 蓋出德牧犬舍
+                const gsHouse = document.createElement('div');
+                gsHouse.className = 'garden-item';
+                gsHouse.style.left = gsHouseX + '%';
+                gsHouse.style.top = gsHouseY + '%';
+                gsHouse.style.zIndex = Math.floor(gsHouseY * 100 + gsHouseX);
+                gsHouse.innerHTML = `<img src="german_shepherd_house.png" class="pixel-prop">`;
+                floor.appendChild(gsHouse);
+
+                // 2. 讓德牧出生
+                let gsX = gsHouseX + 3;
+                let gsY = gsHouseY + 3;
+                const gsDog = document.createElement('div');
+                gsDog.className = 'garden-item moving-dog';
+                gsDog.style.left = gsX + '%';
+                gsDog.style.top = gsY + '%';
+                gsDog.style.zIndex = Math.floor(gsY * 100 + gsX);
+
+                const gsImg = document.createElement('img');
+                gsImg.src = 'german_shepherd_bottom_left.png'; // 預設面向左下
+                gsImg.className = 'pixel-dog';
+                gsDog.appendChild(gsImg);
+                floor.appendChild(gsDog);
+
+                // 3. 啟動德牧的巡邏 AI (🌟 巡邏範圍擴大兩倍，更符合大狗特性)
+                if (window.gsWalkTimer) clearInterval(window.gsWalkTimer);
+                window.gsWalkTimer = setInterval(() => {
+                    let targetX = gsX;
+                    let targetY = gsY;
+
+                    if (Math.random() < 0.5) {
+                        // 🌟 範圍從 20 擴大到 40 (-20 到 +20)
+                        targetX = gsHouseX + (Math.random() * 40 - 20);
+                        let diffX = targetX - gsX;
+                        gsImg.src = diffX > 0 ? 'german_shepherd_bottom_right.png' : 'german_shepherd_top_left.png';
+                    } else {
+                        // 🌟 範圍從 20 擴大到 40 (-20 到 +20)
+                        targetY = gsHouseY + (Math.random() * 40 - 20);
+                        let diffY = targetY - gsY;
+                        gsImg.src = diffY > 0 ? 'german_shepherd_bottom_left.png' : 'german_shepherd_top_right.png';
+                    }
+
+                    gsX = targetX;
+                    gsY = targetY;
+                    gsDog.style.left = gsX + '%';
+                    gsDog.style.top = gsY + '%';
+                    gsDog.style.zIndex = Math.floor(gsY * 100 + gsX);
+                }, 4500);
+            }
             }
 
 
 
 
-            // 5. 獎勵機制：保底生態 + 根據近 3 天紀錄動態累加蝴蝶與蜜蜂
+            // =========================================
+            // 🌟 5. 獎勵機制與介面更新：保底生態 + 動態蝴蝶與蜜蜂 🌟
+            // =========================================
             const wrapper = document.getElementById('garden-floor-wrapper');
             wrapper.querySelectorAll('.flying-insect').forEach(el => el.remove());
             
             let rewardBugs = ['🐝', '🦋', '🐝', '🦋'];
+            let butterflyCount = 2; // 🌟 預設保底 2 隻蝴蝶
+            let beeCount = 2;       // 🌟 預設保底 2 隻蜜蜂
             
-            const todayStr = getFormattedDate(new Date());
-            const todayDt = new Date(todayStr + "T00:00:00");
+            const todayStr2 = getFormattedDate(new Date());
+            const todayDt2 = new Date(todayStr2 + "T00:00:00");
 
             Object.keys(recordsDB).forEach(dateStr => {
                 const recordDt = new Date(dateStr + "T00:00:00");
-                const diffDays = Math.floor((todayDt - recordDt) / (1000 * 60 * 60 * 24));
+                const diffDays = Math.floor((todayDt2 - recordDt) / (1000 * 60 * 60 * 24));
                 
                 if (diffDays >= 0 && diffDays < 3) {
                     let totalWater = 0;
@@ -1192,10 +1347,16 @@
                     });
                     const maxSteps = stepRecords.length > 0 ? Math.max(...stepRecords) : 0;
                     
-                    if (totalWater >= 1500) rewardBugs.push('🦋');
-                    if (maxSteps >= 3000) rewardBugs.push('🐝');
+                    if (totalWater >= 1500) { rewardBugs.push('🦋'); butterflyCount++; } // 喝水加蝴蝶
+                    if (maxSteps >= 3000) { rewardBugs.push('🐝'); beeCount++; }         // 走路加蜜蜂
                 }
             });
+
+            // 🌟 將算好的蝴蝶與蜜蜂數量分別寫入盆栽介面 🌟
+            const butterflyEl = document.getElementById('count-butterfly');
+            const beeEl = document.getElementById('count-bee');
+            if (butterflyEl) butterflyEl.innerText = butterflyCount;
+            if (beeEl) beeEl.innerText = beeCount;
 
             rewardBugs.forEach((bug, index) => {
                 const insect = document.createElement('div');
@@ -1373,6 +1534,8 @@
             activeGrowingAges.sort((a, b) => a - b);
             document.getElementById('garden-total-flowers').innerText = gardenCount;
             
+            
+
             currentViewingIndex = 0;
             renderCurrentPlantStatus();
         }
@@ -1547,6 +1710,23 @@
                 </div>`;
             }
 
+            // 1.5 德國牧羊犬入住通知
+            const hasGs = localStorage.getItem('gs_unlocked_notified');
+            const unlockGsDate = localStorage.getItem('gs_unlock_date');
+            if (hasGs) {
+                noticesHTML += `
+                <div style="background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid var(--danger); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <img src="german_shepherd_bottom_left.png" style="width: 1.2rem; height: 1.2rem; object-fit: contain;">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">獲得德國牧羊犬</span>
+                            <span style="font-size: 0.65rem; color: var(--text-muted);">連續紀錄滿 30 天</span>
+                        </div>
+                    </div>
+                    <span style="font-size: 0.65rem; background: var(--danger); color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${unlockGsDate || '最近'}</span>
+                </div>`;
+            }
+
             // 2. 最新解鎖花朵通知 (縮小圖片為 1.2rem)
             if (latestFlowerStr) {
                 const latestFlower = JSON.parse(latestFlowerStr);
@@ -1620,16 +1800,31 @@
             ];
             const hasDog = localStorage.getItem('dog_unlocked_notified') === 'true';
 
-            // 1. 產生寵物區塊 HTML
+            // 1. 產生寵物區塊 HTML (現在有 4 個物件，改用 gallery-grid 完美 4 等分)
+            const hasGs = localStorage.getItem('gs_unlocked_notified') === 'true';
             const petContainer = document.getElementById('gallery-pets');
+            petContainer.className = 'pet-scroll-container'; // 🌟 換成橫向滑動類別 🌟
+
+            // 💡 預覽模式下，圖鑑也強制顯示解鎖狀態，方便你確認圖片
+            const showDog = isPreviewDog || hasDog;
+            const showGs = isPreviewDog || hasGs;
+
             petContainer.innerHTML = `
-                <div class="gallery-item ${hasDog ? '' : 'locked'}">
+                <div class="gallery-item ${showDog ? '' : 'locked'}">
                     <img src="house.png">
-                    <div class="gallery-item-name">${hasDog ? '溫馨狗屋' : '???'}</div>
+                    <div class="gallery-item-name">${showDog ? '溫馨狗屋' : '???'}</div>
                 </div>
-                <div class="gallery-item ${hasDog ? '' : 'locked'}">
+                <div class="gallery-item ${showDog ? '' : 'locked'}">
                     <img src="dog_down.png">
-                    <div class="gallery-item-name">${hasDog ? '小柴犬' : '???'}</div>
+                    <div class="gallery-item-name">${showDog ? '小柴犬' : '???'}</div>
+                </div>
+                <div class="gallery-item ${showGs ? '' : 'locked'}">
+                    <img src="german_shepherd_house.png">
+                    <div class="gallery-item-name">${showGs ? '守衛犬舍' : '???'}</div>
+                </div>
+                <div class="gallery-item ${showGs ? '' : 'locked'}">
+                    <img src="german_shepherd_bottom_left.png">
+                    <div class="gallery-item-name">${showGs ? '德國牧羊犬' : '???'}</div>
                 </div>
             `;
 
