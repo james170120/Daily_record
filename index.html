@@ -257,24 +257,11 @@
            ========================================= */
         /* 🌟 移除 backdrop-filter：毛玻璃疊在會動的背景上，每一幀都要重算 🌟 */
         .game-sidebar {
-            position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; gap: 20px; z-index: 20;
+            position: fixed; right: 20px; top: 65%; transform: translateY(-50%);
+            display: flex; flex-direction: column; align-items: center; z-index: 20;
+            opacity: 0.85; /* 稍微透明，讓後面的花草透出來 */
         }
 
-        .game-btn {
-            width: 64px; height: 64px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.45);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow:
-                0 8px 16px rgba(0, 0, 0, 0.2),
-                inset 0 4px 5px rgba(255, 255, 255, 0.5),
-                inset 0 -4px 5px rgba(0, 0, 0, 0.05);
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.8rem; cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .game-btn:hover { background: rgba(255, 255, 255, 0.6); transform: scale(1.05); }
-        .game-btn:active { transform: scale(0.92); box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 2px 5px rgba(0, 0, 0, 0.2); }
 
         /* =========================================
            3. 各功能視窗 (改用近不透明底色取代毛玻璃)
@@ -287,12 +274,44 @@
         }
         .overlay-page.active { display: block; }
 
-        .back-to-game-btn {
-            position: sticky; top: 0; z-index: 50; display: inline-flex; align-items: center; gap: 5px;
-            background: rgba(255, 255, 255, 0.9); color: var(--danger); border: 1px solid rgba(231, 76, 60, 0.3);
-            padding: 10px 18px; border-radius: 20px; font-weight: bold; font-size: 1rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; margin-bottom: 20px;
+        /* 🪵 木牌風按鈕：純 CSS 畫木紋，不用額外圖片
+           套用在：主畫面圓形按鈕、返回花園/返回行事曆、血糖血壓紀錄表、以及任何加上 .wood-btn 的按鈕 */
+        .sign-board, .back-to-game-btn, .bp-table-btn, .wood-btn {
+            --wood: #8d6e63; --wood-light: #a1887f; --wood-dark: #5d4037;
+            display: inline-flex; align-items: center; gap: 6px;
+            color: #fff8e1; font-weight: bold; font-size: 1rem; padding: 10px 16px;
+            border: 1px solid var(--wood-dark); border-bottom-width: 4px; border-radius: 10px;
+            text-shadow: 0 1px 0 rgba(62, 39, 35, 0.7);
+            background:
+                radial-gradient(ellipse 9px 4px at 80% 58%, rgba(62, 39, 35, 0.45) 0 35%, rgba(62, 39, 35, 0.15) 55%, transparent 75%),
+                radial-gradient(ellipse 16px 6px at 80% 58%, transparent 55%, rgba(62, 39, 35, 0.18) 62%, transparent 75%),
+                repeating-linear-gradient(176deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 9px),
+                repeating-linear-gradient(178deg, rgba(62, 39, 35, 0.22) 0 1px, transparent 1px 4px, rgba(62, 39, 35, 0.12) 4px 5px, transparent 5px 12px),
+                linear-gradient(180deg, var(--wood-light), var(--wood));
+            box-shadow: 0 3px 6px rgba(62, 39, 35, 0.25);
+            cursor: pointer; transition: transform 0.1s, border-bottom-width 0.1s;
         }
+        .back-to-game-btn:active, .bp-table-btn:active, .wood-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
+        /* 主畫面右側：三個按鈕合成一塊直立木告示牌，下面插著木樁 */
+        .sign-board { flex-direction: column; gap: 0; padding: 4px; border-width: 2px; border-bottom-width: 5px; box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25); cursor: default; }
+        .sign-post { width: 12px; height: 42px; background: linear-gradient(90deg, #4e342e, #6d4c41 45%, #4e342e); border-radius: 0 0 3px 3px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); }
+        .game-btn {
+            position: relative; width: 58px; height: 61px; display: flex; justify-content: center; align-items: center;
+            font-size: 1.8rem; border-radius: 8px; cursor: pointer; transition: transform 0.1s, background 0.1s;
+        }
+        /* 按鈕之間留空隙避免按錯，木板接縫畫在空隙正中間 */
+        .game-btn + .game-btn { margin-top: 12px; }
+        .game-btn + .game-btn::before {
+            content: ''; position: absolute; left: 4px; right: 4px; top: -7px; height: 1px;
+            background: rgba(62, 39, 35, 0.5); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        .game-btn:active { background: rgba(62, 39, 35, 0.25); transform: scale(0.94); }
+        /* 整排寬的木牌按鈕 (查看成就圖鑑、關閉圖鑑) */
+        .wood-btn { width: 100%; justify-content: center; padding: 14px; font-size: 1.1rem; }
+        .back-to-game-btn { position: sticky; top: 0; z-index: 50; margin-bottom: 20px; }
+        .back-to-game-btn::before { content: '←'; }
+        /* 紀錄表按鈕用淺一點的木頭，跟返回按鈕區分 */
+        .bp-table-btn { --wood: #a1887f; --wood-light: #bcaaa4; --wood-dark: #6d4c41; font-size: 0.95rem; }
 
         .section-title { font-size: 1.1rem; margin-bottom: 15px; color: var(--accent); font-weight: bold; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
@@ -326,7 +345,6 @@
 
         /* 🩺 行事曆上的血壓數值 (橘色=早上、紫色=晚上，偏高會加紅底) */
         .calendar-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .bp-table-btn { background: #fff; color: var(--danger); border: 1px solid rgba(231, 76, 60, 0.4); padding: 10px 14px; border-radius: 20px; font-size: 0.95rem; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; }
         .bp-legend { font-size: 0.75rem; color: var(--text-muted); }
         .cal-bp { font-size: 0.55rem; line-height: 1.3; text-align: center; margin-top: 2px; font-weight: normal; letter-spacing: -0.3px; }
         .bp-am { color: #e67e22; }
@@ -351,6 +369,9 @@
         .bp-flag.low { background: #3498db; }
         .bp-pulse { font-size: 0.75rem; color: var(--text-muted); }
         .bp-entry + .bp-entry { margin-top: 4px; }
+        /* 🩸 血糖：早晚同一個顏色，接在血壓下面 */
+        .glu-value { color: #16a085; font-weight: bold; }
+        .glu-entry { margin-top: 4px; font-size: 0.9rem; }
 
         /* =========================================
            4. 內部小彈窗 (新增紀錄、明細)
@@ -471,6 +492,7 @@
 
     <!-- 第二層：遊戲右側浮動按鈕 -->
     <div class="game-sidebar">
+      <div class="sign-board">
         <div class="game-btn" onclick="openRecordPage()">📝</div>
         <div class="game-btn" onclick="openOverlay('page-plant')">🪴</div>
         <!-- 🌟 替換這顆：純 CSS 繪製的動態行事曆圖示 🌟 -->
@@ -487,6 +509,8 @@
                 <div id="sidebar-date" style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; color: var(--text-color); margin-top: 1px;"></div>
             </div>
         </div>
+      </div>
+      <div class="sign-post"></div>
     </div>
 
     <!-- 第三層：遊戲功能視窗 -->
@@ -510,7 +534,8 @@
             <button class="record-btn" onclick="openInputModal('吃藥', 'medical')" style="border-bottom: 3px solid var(--primary);"><span class="icon">💊</span>吃藥</button>
             <button class="record-btn" onclick="openInputModal('步數', 'steps')" style="border-bottom: 3px solid #2ecc71;"><span class="icon">👣</span>步數</button>
             <button class="record-btn" onclick="openInputModal('血壓', 'bp')" style="border-bottom: 3px solid #e84393;"><span class="icon">🩺</span>血壓</button>
-            <button class="record-btn" onclick="openInputModal('身體狀況', 'status')" style="grid-column: span 2; border-bottom: 3px solid var(--warning);"><span class="icon">👩‍⚕️</span>身體狀況紀錄</button>
+            <button class="record-btn" onclick="openInputModal('血糖', 'glucose')" style="border-bottom: 3px solid #16a085;"><span class="icon">🩸</span>血糖</button>
+            <button class="record-btn" onclick="openInputModal('身體狀況', 'status')" style="border-bottom: 3px solid var(--warning);"><span class="icon">👩‍⚕️</span>身體狀況</button>
         </div>
     </div>
 
@@ -554,9 +579,7 @@
             </div>
 
             <!-- 🌟 新增：成就圖鑑按鈕 🌟 -->
-            <button class="submit-btn" onclick="openGalleryModal()" style="width: 100%; margin-top: 15px; background: var(--warning); box-shadow: 0 4px 10px rgba(243, 156, 18, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px;">
-                🏆 查看成就圖鑑
-            </button>
+            <button class="wood-btn" onclick="openGalleryModal()" style="margin-top: 15px;">查看成就圖鑑</button>
         </div>
     </div>
 
@@ -564,7 +587,7 @@
     <div id="page-calendar" class="overlay-page">
         <div class="calendar-toolbar">
             <div class="back-to-game-btn" onclick="closeOverlay('page-calendar')" style="margin-bottom: 0;">返回花園</div>
-            <button class="bp-table-btn" onclick="openBPPage()">🩺 血壓紀錄表</button>
+            <button class="bp-table-btn" onclick="openBPPage()">血糖/血壓紀錄表</button>
         </div>
         <div class="calendar-header">
             <button class="calendar-nav-btn" onclick="changeMonth(-1)">◀</button>
@@ -582,7 +605,6 @@
     <!-- 🩺 血壓紀錄表視窗 (疊在行事曆上方，返回就回到行事曆) -->
     <div id="page-bp" class="overlay-page">
         <div class="back-to-game-btn" onclick="closeOverlay('page-bp')">返回行事曆</div>
-        <div class="bp-legend" style="margin-bottom: 8px;">血壓：<span class="bp-am">● 早上</span>　<span class="bp-pm">● 晚上</span>　<span class="bp-high">偏高</span>　<span class="bp-low">偏低</span></div>
         <div class="calendar-header">
             <button class="calendar-nav-btn" onclick="changeMonth(-1)">◀</button>
             <span id="bp-month-title"></span>
@@ -591,9 +613,8 @@
         <table class="bp-table">
             <thead><tr><th>日期</th><th>☀️ 早上</th><th>🌙 晚上</th></tr></thead>
             <tbody id="bp-table-body"></tbody>
-            <tfoot id="bp-table-foot"></tfoot>
         </table>
-        <div class="bp-legend" style="margin-top: 10px; text-align: center;">單位 mmHg　♥ 脈搏 (次/分)<br><span class="bp-high">偏高</span> = 收縮壓 ≥ 140 或舒張壓 ≥ 90<br><span class="bp-low">偏低</span> = 收縮壓 &lt; 90 或舒張壓 &lt; 60</div>
+        <div class="bp-legend" style="margin-top: 10px; text-align: center;">血壓 mmHg　♥ 脈搏 (次/分)　🩸 血糖 (mg/dL)<br><span class="bp-high">偏高</span> = 收縮壓 ≥ 140 或舒張壓 ≥ 90<br><span class="bp-low">偏低</span> = 收縮壓 &lt; 90 或舒張壓 &lt; 60</div>
     </div>
 
     <!-- 第四層：內部操作小彈窗 -->
@@ -656,6 +677,19 @@
         </div>
     </div>
 
+    <!-- 🥀 凋謝通知 (觸發凋謝的那次上線只跳一次) -->
+    <div id="wither-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <div style="font-size: 3.5rem;">🥀</div>
+            <h2 style="color: #8d6e63; margin: 10px 0 0;">花園有 <span id="wither-count">2</span> 朵花凋謝了</h2>
+            <p style="color: var(--text-color); font-size: 1.05rem; line-height: 1.6; margin: 15px 0;">
+                花朵每 24 小時會凋謝 2 朵，<br>繼續紀錄就能種出新的花喔！<br>
+                <span style="color: var(--text-muted); font-size: 0.9rem;">圖鑑裡收集到的花都還在 🌸</span>
+            </p>
+            <button class="submit-btn" onclick="closeModal('wither-modal')" style="width: 100%; background: #8d6e63; box-shadow: 0 4px 10px rgba(141, 110, 99, 0.4);">我知道了</button>
+        </div>
+    </div>
+
     <!-- 🌟 專屬成就解鎖通知 Modal 🌟 -->
     <div id="unlock-modal" class="modal">
         <div class="modal-content" style="text-align: center; padding: 30px 20px;">
@@ -704,7 +738,7 @@
                 </div>
             </div>
 
-            <button class="close-btn" onclick="closeModal('gallery-modal')" style="width: 100%;">關閉圖鑑</button>
+            <button class="wood-btn" onclick="closeModal('gallery-modal')">關閉圖鑑</button>
         </div>
     </div>
 
@@ -915,6 +949,8 @@
 
                 // 🌟 更新佈告欄顯示狀態 (放在花園之後，開花時抽到的新花才會立刻上佈告欄)
                 updateNoticeBoard();
+                // 🥀 剛好觸發凋謝的這次上線，跳一次小視窗
+                showWitherNotice();
             } catch (error) { sendErrorLog(`讀取失敗: ${error.message}`); }
         }
 
@@ -1055,6 +1091,14 @@
         const FLOWER_TRANSPLANT_MS = 8 * 60 * 60 * 1000;
         const WITHER_PER_DAY = 2;
         const MIN_GARDEN_FLOWERS = 4; // 花園至少保留幾朵，不會凋謝光
+        let pendingWitherCount = 0;   // 這次上線剛凋謝的朵數，畫完花園後跳小視窗通知
+
+        function showWitherNotice() {
+            if (pendingWitherCount <= 0) return;
+            document.getElementById('wither-count').innerText = pendingWitherCount;
+            document.getElementById('wither-modal').style.display = 'flex';
+            pendingWitherCount = 0;
+        }
 
         function applyWithering(gardenFlowers, nowMs) {
             const withered = JSON.parse(localStorage.getItem('withered_flowers') || '[]');
@@ -1083,7 +1127,8 @@
                 localStorage.setItem('last_wither_at', String(lastWitherAt));
             }
             if (witherCount > 0) {
-                localStorage.setItem('latest_wither', JSON.stringify({ count: witherCount, date: getFormattedDate(new Date(nowMs)) }));
+                // 凋謝只會在這裡算一次 (結果已存起來)，所以小視窗也只會跳這一次
+                pendingWitherCount += witherCount;
             }
             return new Set(withered);
         }
@@ -1550,9 +1595,10 @@
         // =========================================
         // 🩺 血壓共用設定與工具
         // =========================================
-        const PERIOD_OPTIONS = { medical: ['早', '中', '晚', '睡前'], bp: ['早上', '晚上'] };
-        // 血壓不用填時間，依早上/晚上存一個代表時間 (讓花園種子照常生長)
+        const PERIOD_OPTIONS = { medical: ['早', '中', '晚', '睡前'], bp: ['早上', '晚上'], glucose: ['早上', '晚上'] };
+        // 血壓、血糖不用填時間，依早上/晚上存一個代表時間 (讓花園種子照常生長)
         const BP_PERIOD_TIME = { '早上': '08:00', '晚上': '20:00' };
+        const FIXED_TIME_TYPES = ['血壓', '血糖']; // 這些紀錄的時間是代表值，畫面上不顯示
         // 偏高標示門檻 (可依醫生建議的目標值調整)
         const BP_HIGH_SYS = 140;
         const BP_HIGH_DIA = 90;
@@ -1591,6 +1637,20 @@
             return `<div class="bp-entry">${bpSpan(bp, periodClass)}${flag}${bp.pulse ? `<div class="bp-pulse">♥ ${bp.pulse}</div>` : ''}</div>`;
         }
 
+        // 🩸 取出某一天的血糖 (mg/dL)，依早上/晚上分開
+        function getDayGlucose(dateStr) {
+            const result = { '早上': [], '晚上': [] };
+            (recordsDB[dateStr] || []).forEach(r => {
+                if (r.type !== '血糖') return;
+                const value = parseInt(r.content);
+                if (value && result[r.period]) result[r.period].push(value);
+            });
+            return result;
+        }
+        function gluEntry(value) {
+            return `<div class="glu-entry"><span class="glu-value">🩸 ${value}</span></div>`;
+        }
+
         function renderPeriodButtons(options) {
             document.getElementById('time-selector').innerHTML = options
                 .map(p => `<button class="time-btn" onclick="selectTime(this, '${p}')">${p}</button>`).join('');
@@ -1610,19 +1670,21 @@
 
             renderPeriodButtons(PERIOD_OPTIONS[category] || []);
             const isBP = category === 'bp';
-            document.getElementById('time-input-group').style.display = isBP ? 'none' : 'flex';
+            const isMorningEvening = isBP || category === 'glucose';
+            document.getElementById('time-input-group').style.display = isMorningEvening ? 'none' : 'flex';
             document.getElementById('content-input-group').style.display = isBP ? 'none' : 'flex';
             document.getElementById('bp-input-group').style.display = isBP ? 'flex' : 'none';
 
             const timeSelector = document.getElementById('time-selector');
             const inputField = document.getElementById('record-input');
-            if (isBP) {
+            if (isMorningEvening) {
                 timeSelector.style.display = 'flex';
-                // 記今天的血壓時，依現在時間先幫忙選好早上/晚上 (可再改)
+                // 記今天的血壓/血糖時，依現在時間先幫忙選好早上/晚上 (可再改)
                 if (targetRecordDate === getFormattedDate(now)) {
                     const guess = now.getHours() < 12 ? '早上' : '晚上';
                     document.querySelectorAll('.time-btn').forEach(btn => { if (btn.innerText === guess) selectTime(btn, guess); });
                 }
+                if (category === 'glucose') { inputField.type = 'number'; inputField.placeholder = '輸入血糖值 (mg/dL)...'; }
             } else if (category === 'medical') {
                 timeSelector.style.display = 'flex'; inputField.type = type === '胰島素' ? 'number' : 'text'; inputField.placeholder = type === '胰島素' ? '輸入劑量...' : '藥品名稱...';
             } else if (category === 'status') {
@@ -1644,7 +1706,7 @@
                 document.getElementById('history-list').innerHTML = typeRecords.map(r => `
                     <div class="history-item">
                         <div style="display:flex; flex-direction:column;">
-                            <span style="font-size:0.75rem; color:var(--accent);">${r.type === '血壓' ? '' : escapeHtml(r.time)} ${r.period ? '['+escapeHtml(r.period)+']' : ''}</span>
+                            <span style="font-size:0.75rem; color:var(--accent);">${FIXED_TIME_TYPES.includes(r.type) ? '' : escapeHtml(r.time)} ${r.period ? '['+escapeHtml(r.period)+']' : ''}</span>
                             <span style="font-size:0.95rem; color:var(--text-color);">${escapeHtml(r.content)}</span>
                         </div>
                         <button class="edit-btn" onclick="startEdit(${r.id})">修改</button>
@@ -1690,6 +1752,15 @@
                     if (!confirm(`脈搏 ${pulse} 好像怪怪的，確定要儲存嗎？`)) return;
                 }
                 val = formatBP({ sys, dia, pulse });
+                chosenTime = BP_PERIOD_TIME[selectedTimePeriod];
+            } else if (currentInputCategory === 'glucose') {
+                if (!selectedTimePeriod) return alert('請選擇早上或晚上！');
+                const glucose = parseInt(val);
+                if (!glucose) return alert('請輸入血糖數字！');
+                if (glucose < 20 || glucose > 600) {
+                    if (!confirm(`血糖 ${glucose} 好像怪怪的，確定要儲存嗎？`)) return;
+                }
+                val = String(glucose);
                 chosenTime = BP_PERIOD_TIME[selectedTimePeriod];
             }
 
@@ -1750,6 +1821,8 @@
                         } else {
                             customMsg += "\n每天量血壓，是照顧自己最好的習慣 💗";
                         }
+                    } else if (currentRecordType === '血糖') {
+                        customMsg = `${selectedTimePeriod}血糖 ${val} mg/dL 紀錄好囉！\n固定量血糖，是照顧自己最好的習慣 💗`;
                     } else {
                         const msgs = ["太棒了！每一筆紀錄都是愛自己的證明。", "持之以恆，健康的花園會越開越美麗！", "很棒的紀錄！今天的你也辛苦了。", "又完成了一次紀錄，離健康目標更近一步囉！", "超讚！植物們因為你的努力而開心地生長著。"];
                         customMsg = msgs[Math.floor(Math.random() * msgs.length)];
@@ -1884,41 +1957,30 @@
 
         function renderBPTable() {
             const year = currentDate.getFullYear(); const month = currentDate.getMonth() + 1;
-            document.getElementById('bp-month-title').innerText = `${year}年 ${month}月 血壓`;
+            document.getElementById('bp-month-title').innerText = `${year}年 ${month}月 血糖/血壓`;
             const weekNames = ['日', '一', '二', '三', '四', '五', '六'];
             const daysInMonth = new Date(year, month, 0).getDate();
-            const all = { '早上': [], '晚上': [] };
+            const dash = '<span style="color:var(--text-muted);">—</span>';
             let rows = '';
 
             for (let d = 1; d <= daysInMonth; d++) {
                 const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayBP = getDayBP(dateStr);
-                if (dayBP['早上'].length === 0 && dayBP['晚上'].length === 0) continue;
-                all['早上'].push(...dayBP['早上']);
-                all['晚上'].push(...dayBP['晚上']);
+                const dayGlu = getDayGlucose(dateStr);
+                const hasAny = ['早上', '晚上'].some(p => dayBP[p].length || dayGlu[p].length);
+                if (!hasAny) continue;
 
-                const cellOf = (list, cls) => list.length ? list.map(bp => bpEntry(bp, cls)).join('') : '<span style="color:var(--text-muted);">—</span>';
+                // 每格：血壓 (含脈搏) 在上，血糖接在下面
+                const cellOf = (p, cls) => {
+                    const html = dayBP[p].map(bp => bpEntry(bp, cls)).join('') + dayGlu[p].map(gluEntry).join('');
+                    return html || dash;
+                };
                 const week = weekNames[new Date(year, month - 1, d).getDay()];
-                rows += `<tr><td>${month}/${d} (${week})</td><td>${cellOf(dayBP['早上'], 'bp-am')}</td><td>${cellOf(dayBP['晚上'], 'bp-pm')}</td></tr>`;
+                rows += `<tr><td>${month}/${d} (${week})</td><td>${cellOf('早上', 'bp-am')}</td><td>${cellOf('晚上', 'bp-pm')}</td></tr>`;
             }
 
             document.getElementById('bp-table-body').innerHTML = rows ||
-                `<tr><td colspan="3" style="color:var(--text-muted); padding: 30px 6px;">這個月還沒有血壓紀錄</td></tr>`;
-
-            // 月平均 (方便給醫生看；脈搏只平均有填的)
-            const mean = nums => Math.round(nums.reduce((s, n) => s + n, 0) / nums.length);
-            const avg = (list, cls) => {
-                if (list.length === 0) return '<span style="color:var(--text-muted);">—</span>';
-                const pulses = list.map(b => b.pulse).filter(Boolean);
-                return bpEntry({
-                    sys: mean(list.map(b => b.sys)),
-                    dia: mean(list.map(b => b.dia)),
-                    pulse: pulses.length ? mean(pulses) : null
-                }, cls);
-            };
-            document.getElementById('bp-table-foot').innerHTML = rows
-                ? `<tr><td>月平均</td><td>${avg(all['早上'], 'bp-am')}</td><td>${avg(all['晚上'], 'bp-pm')}</td></tr>`
-                : '';
+                `<tr><td colspan="3" style="color:var(--text-muted); padding: 30px 6px;">這個月還沒有血壓或血糖紀錄</td></tr>`;
         }
 
         function openDetailModal(y, m, d) {
@@ -1931,8 +1993,8 @@
                 const items = records.filter(r => r.type === type);
                 if (items.length === 0) return `<div class="detail-item" style="color:var(--text-muted); font-size: 0.85rem; padding-left: 5px;">無</div>`;
                 if(isMed) items.sort((a,b) => (periodOrder[a.period]||99) - (periodOrder[b.period]||99));
-                // 血壓的時間是代表值 (08:00/20:00)，不顯示
-                const timeTag = i => type === '血壓' ? '' : `<span class="tag">${escapeHtml(i.time)}</span>`;
+                // 血壓、血糖的時間是代表值 (08:00/20:00)，不顯示
+                const timeTag = i => FIXED_TIME_TYPES.includes(type) ? '' : `<span class="tag">${escapeHtml(i.time)}</span>`;
                 return items.map(i => `<div class="detail-item" style="padding-left: 5px;"><div style="flex:1; color:var(--text-color);">${isMed?'<b>['+escapeHtml(i.period||'未分類')+']</b> ':''}${escapeHtml(i.content)}</div>${timeTag(i)}</div>`).join('');
             };
 
@@ -1945,6 +2007,7 @@
                 <div class="detail-group" style="border-left-color: #3498db;"><div class="detail-time-title">💧 喝水紀錄 (今日總計: ${totalWater} ml)</div><div style="padding-left:5px;">${fmt('喝水')}</div></div>
                 <div class="detail-group" style="border-left-color: #2ecc71;"><div class="detail-time-title">👣 步數紀錄 (今日最高: ${maxSteps} 步)</div><div style="padding-left:5px;">${fmt('步數')}</div></div>
                 <div class="detail-group" style="border-left-color: #e84393;"><div class="detail-time-title" style="color: #e84393;">🩺 血壓 (mmHg)</div><div style="padding-left:5px;">${fmt('血壓', true)}</div></div>
+                <div class="detail-group" style="border-left-color: #16a085;"><div class="detail-time-title" style="color: #16a085;">🩸 血糖 (mg/dL)</div><div style="padding-left:5px;">${fmt('血糖', true)}</div></div>
                 <div class="detail-group danger"><div class="detail-time-title">💉 胰島素</div><div style="padding-left:5px;">${fmt('胰島素', true)}</div></div>
                 <div class="detail-group" style="border-left-color: var(--primary);"><div class="detail-time-title">💊 吃藥</div><div style="padding-left:5px;">${fmt('吃藥', true)}</div></div>
                 <div class="detail-group warning"><div class="detail-time-title">🤒 身體狀況</div><div style="padding-left:5px;">${fmt('身體狀況')}</div></div>
@@ -2051,23 +2114,6 @@
                         </div>
                     </div>
                     <span style="font-size: 0.65rem; background: var(--primary); color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${latestFlower.date || '最近'}</span>
-                </div>`;
-            }
-
-            // 3. 最近一次凋謝通知
-            const latestWitherStr = localStorage.getItem('latest_wither');
-            if (latestWitherStr) {
-                const latestWither = JSON.parse(latestWitherStr);
-                noticesHTML += `
-                <div style="background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid #a1887f; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="font-size: 1.2rem;">🥀</div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">有 ${latestWither.count} 朵花凋謝了</span>
-                            <span style="font-size: 0.65rem; color: var(--text-muted);">每 24 小時凋謝 2 朵，多紀錄就能種回來 (圖鑑不會消失)</span>
-                        </div>
-                    </div>
-                    <span style="font-size: 0.65rem; background: #a1887f; color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${latestWither.date || '最近'}</span>
                 </div>`;
             }
 
