@@ -257,11 +257,8 @@
            ========================================= */
         /* 🌟 移除 backdrop-filter：毛玻璃疊在會動的背景上，每一幀都要重算 🌟 */
         .game-sidebar {
-<<<<<<< HEAD
-            position: fixed; right: 20px; top: 80%; transform: translateY(-50%);
-=======
-            position: fixed; right: 20px; top: 85%; transform: translateY(-50%);
->>>>>>> 697d030e29b2d122fbffde6a4521c87e5ad0ddd6
+            /* 82% 的位置；比較矮的手機會自動往上提，確保木樁不會超出畫面底部 */
+            position: fixed; right: 20px; top: min(82%, calc(100% - 140px)); transform: translateY(-50%);
             display: flex; flex-direction: column; align-items: center; z-index: 20;
             opacity: 0.85; /* 稍微透明，讓後面的花草透出來 */
         }
