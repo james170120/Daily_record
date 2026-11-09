@@ -356,10 +356,11 @@
         .bp-inputs { display: flex; align-items: center; gap: 8px; }
         .bp-inputs .input-field { text-align: center; font-size: 1.3rem; }
         .bp-slash { font-size: 1.6rem; color: var(--text-muted); }
-        .bp-table { width: 100%; border-collapse: collapse; background: var(--panel-bg); border-radius: 0 0 12px 12px; overflow: hidden; font-size: 1rem; }
-        .bp-table th { background: rgba(231, 76, 60, 0.08); color: var(--text-color); padding: 10px 6px; font-size: 0.9rem; }
-        .bp-table td { padding: 10px 6px; text-align: center; border-top: 1px solid var(--border); }
-        .bp-table td:first-child { color: var(--text-muted); font-size: 0.9rem; white-space: nowrap; }
+        .bp-table { width: 100%; border-collapse: collapse; background: var(--panel-bg); border-radius: 0 0 12px 12px; overflow: hidden; font-size: 0.85rem; }
+        .bp-table th { background: rgba(231, 76, 60, 0.08); color: var(--text-color); padding: 10px 4px; font-size: 0.85rem; white-space: nowrap; }
+        .bp-table td { padding: 8px 4px; text-align: center; border-top: 1px solid var(--border); }
+        /* 日期欄改成兩行 (日期 / 星期)，讓右邊兩欄有空間放血壓 + 脈搏 */
+        .bp-table td:first-child { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; line-height: 1.3; }
         .bp-table tfoot td { font-weight: bold; background: rgba(0, 0, 0, 0.03); }
         .bp-low { background: rgba(52, 152, 219, 0.18); border-radius: 3px; font-weight: bold; }
         .bp-table .bp-high, .bp-table .bp-low { padding: 1px 4px; }
@@ -368,11 +369,19 @@
         .bp-flag { display: inline-block; margin-left: 3px; padding: 0 4px; border-radius: 6px; font-size: 0.65rem; font-weight: bold; color: #fff; vertical-align: middle; }
         .bp-flag.high { background: var(--danger); }
         .bp-flag.low { background: #3498db; }
-        .bp-pulse { font-size: 0.75rem; color: var(--text-muted); }
-        .bp-entry + .bp-entry { margin-top: 4px; }
-        /* 🩸 血糖：早晚同一個顏色，接在血壓下面 */
+        /* 血壓、偏高標籤、脈搏排在同一行 */
+        .bp-entry { display: flex; justify-content: center; align-items: center; gap: 3px; white-space: nowrap; }
+        .bp-entry .bp-flag { margin-left: 0; }
+        /* 脈搏：小字灰色空心愛心，跟紅色的血糖水滴明顯區分 */
+        .bp-pulse { font-size: 0.7rem; color: var(--text-muted); font-weight: bold; }
+        .bp-entry + .bp-entry { margin-top: 6px; }
+        /* 🩸 血糖：在血壓下面另起一列，橫跨早上和晚上，多筆時左右排列 */
         .glu-value { color: #16a085; font-weight: bold; }
-        .glu-entry { margin-top: 4px; font-size: 0.9rem; }
+        .glu-list { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 16px; padding-left: 8px; } /* 筆數多時自動換行，不會撐出畫面 */
+        .glu-entry { display: inline-flex; align-items: center; gap: 3px; font-size: 0.85rem; white-space: nowrap; }
+        .glu-hour { color: var(--text-color); font-size: 0.75rem; }
+        /* 同一天的血糖列跟上面的血壓列連在一起，不畫分隔線 */
+        .bp-table tr.glu-row td { border-top: none; padding-top: 0; }
 
         /* =========================================
            4. 內部小彈窗 (新增紀錄、明細)
@@ -615,7 +624,7 @@
             <thead><tr><th>日期</th><th>☀️ 早上</th><th>🌙 晚上</th></tr></thead>
             <tbody id="bp-table-body"></tbody>
         </table>
-        <div class="bp-legend" style="margin-top: 10px; text-align: center;">血壓 mmHg　♥ 脈搏 (次/分)　🩸 血糖 (mg/dL)<br><span class="bp-high">偏高</span> = 收縮壓 ≥ 140 或舒張壓 ≥ 90<br><span class="bp-low">偏低</span> = 收縮壓 &lt; 90 或舒張壓 &lt; 60</div>
+        <div class="bp-legend" style="margin-top: 10px; text-align: center;">血壓 mmHg　♡&#xFE0E; 脈搏 (次/分)　🩸 血糖 (mg/dL)<br><span class="bp-high">偏高</span> = 收縮壓 ≥ 140 或舒張壓 ≥ 90<br><span class="bp-low">偏低</span> = 收縮壓 &lt; 90 或舒張壓 &lt; 60</div>
     </div>
 
     <!-- 第四層：內部操作小彈窗 -->
@@ -648,7 +657,7 @@
                 </div>
                 <label for="bp-pulse" style="font-size:0.9rem; color:var(--text-muted); margin-top: 10px;">脈搏 (次/分，可不填)：</label>
                 <div class="bp-inputs">
-                    <span class="bp-slash" style="font-size: 1.3rem;">♥</span>
+                    <span class="bp-slash" style="font-size: 1.3rem;">♡&#xFE0E;</span>
                     <input id="bp-pulse" class="input-field" type="number" inputmode="numeric" placeholder="脈搏">
                 </div>
             </div>
@@ -1596,10 +1605,10 @@
         // =========================================
         // 🩺 血壓共用設定與工具
         // =========================================
-        const PERIOD_OPTIONS = { medical: ['早', '中', '晚', '睡前'], bp: ['早上', '晚上'], glucose: ['早上', '晚上'] };
-        // 血壓、血糖不用填時間，依早上/晚上存一個代表時間 (讓花園種子照常生長)
+        const PERIOD_OPTIONS = { medical: ['早', '中', '晚', '睡前'], bp: ['早上', '晚上'] };
+        // 血壓不用填時間，依早上/晚上存一個代表時間 (讓花園種子照常生長)；血糖不分早晚，記實際時間
         const BP_PERIOD_TIME = { '早上': '08:00', '晚上': '20:00' };
-        const FIXED_TIME_TYPES = ['血壓', '血糖']; // 這些紀錄的時間是代表值，畫面上不顯示
+        const FIXED_TIME_TYPES = ['血壓']; // 這些紀錄的時間是代表值，畫面上不顯示
         // 偏高標示門檻 (可依醫生建議的目標值調整)
         const BP_HIGH_SYS = 140;
         const BP_HIGH_DIA = 90;
@@ -1632,24 +1641,24 @@
             return `<span class="${periodClass}${bpLevelClass(bp)}">${bp.sys}/${bp.dia}</span>`;
         }
 
-        // 紀錄表用：血壓一行，有脈搏就在下面多一行小字
+        // 紀錄表用：血壓、偏高/偏低標籤、脈搏排成一行 (♡ 後面的 ︎ 讓手機顯示成灰色文字，不變成紅色 emoji)
         function bpEntry(bp, periodClass) {
             const flag = isHighBP(bp) ? '<span class="bp-flag high">偏高</span>' : isLowBP(bp) ? '<span class="bp-flag low">偏低</span>' : '';
-            return `<div class="bp-entry">${bpSpan(bp, periodClass)}${flag}${bp.pulse ? `<div class="bp-pulse">♥ ${bp.pulse}</div>` : ''}</div>`;
+            const pulse = bp.pulse ? `<span class="bp-pulse">♡︎${bp.pulse}</span>` : '';
+            return `<div class="bp-entry">${bpSpan(bp, periodClass)}${flag}${pulse}</div>`;
         }
 
-        // 🩸 取出某一天的血糖 (mg/dL)，依早上/晚上分開
+        // 🩸 取出某一天的血糖 (mg/dL)，不分早晚，依時間排序
         function getDayGlucose(dateStr) {
-            const result = { '早上': [], '晚上': [] };
-            (recordsDB[dateStr] || []).forEach(r => {
-                if (r.type !== '血糖') return;
-                const value = parseInt(r.content);
-                if (value && result[r.period]) result[r.period].push(value);
-            });
-            return result;
+            return (recordsDB[dateStr] || [])
+                .filter(r => r.type === '血糖' && parseInt(r.content))
+                .map(r => ({ value: parseInt(r.content), time: r.time || '' }))
+                .sort((a, b) => a.time.localeCompare(b.time));
         }
-        function gluEntry(value) {
-            return `<div class="glu-entry"><span class="glu-value">🩸 ${value}</span></div>`;
+        // 紀錄表用：血糖數值 + 黑字小時 (例如 14點)
+        function gluEntry(g) {
+            const hour = parseInt(g.time);
+            return `<span class="glu-entry"><span class="glu-value">🩸 ${g.value}</span>${isNaN(hour) ? '' : `<span class="glu-hour">${hour}點</span>`}</span>`;
         }
 
         function renderPeriodButtons(options) {
@@ -1671,21 +1680,22 @@
 
             renderPeriodButtons(PERIOD_OPTIONS[category] || []);
             const isBP = category === 'bp';
-            const isMorningEvening = isBP || category === 'glucose';
-            document.getElementById('time-input-group').style.display = isMorningEvening ? 'none' : 'flex';
+            document.getElementById('time-input-group').style.display = isBP ? 'none' : 'flex';
             document.getElementById('content-input-group').style.display = isBP ? 'none' : 'flex';
             document.getElementById('bp-input-group').style.display = isBP ? 'flex' : 'none';
 
             const timeSelector = document.getElementById('time-selector');
             const inputField = document.getElementById('record-input');
-            if (isMorningEvening) {
+            if (isBP) {
                 timeSelector.style.display = 'flex';
-                // 記今天的血壓/血糖時，依現在時間先幫忙選好早上/晚上 (可再改)
+                // 記今天的血壓時，依現在時間先幫忙選好早上/晚上 (可再改)
                 if (targetRecordDate === getFormattedDate(now)) {
                     const guess = now.getHours() < 12 ? '早上' : '晚上';
                     document.querySelectorAll('.time-btn').forEach(btn => { if (btn.innerText === guess) selectTime(btn, guess); });
                 }
-                if (category === 'glucose') { inputField.type = 'number'; inputField.placeholder = '輸入血糖值 (mg/dL)...'; }
+            } else if (category === 'glucose') {
+                // 血糖不分早晚，用上面的時間欄 (預設現在時間，可修改)
+                timeSelector.style.display = 'none'; inputField.type = 'number'; inputField.placeholder = '輸入血糖值 (mg/dL)...';
             } else if (category === 'medical') {
                 timeSelector.style.display = 'flex'; inputField.type = type === '胰島素' ? 'number' : 'text'; inputField.placeholder = type === '胰島素' ? '輸入劑量...' : '藥品名稱...';
             } else if (category === 'status') {
@@ -1755,14 +1765,12 @@
                 val = formatBP({ sys, dia, pulse });
                 chosenTime = BP_PERIOD_TIME[selectedTimePeriod];
             } else if (currentInputCategory === 'glucose') {
-                if (!selectedTimePeriod) return alert('請選擇早上或晚上！');
                 const glucose = parseInt(val);
                 if (!glucose) return alert('請輸入血糖數字！');
                 if (glucose < 20 || glucose > 600) {
                     if (!confirm(`血糖 ${glucose} 好像怪怪的，確定要儲存嗎？`)) return;
                 }
                 val = String(glucose);
-                chosenTime = BP_PERIOD_TIME[selectedTimePeriod];
             }
 
             if (usesPeriod && !selectedTimePeriod) return alert('請選擇時段！');
@@ -1823,7 +1831,7 @@
                             customMsg += "\n每天量血壓，是照顧自己最好的習慣 💗";
                         }
                     } else if (currentRecordType === '血糖') {
-                        customMsg = `${selectedTimePeriod}血糖 ${val} mg/dL 紀錄好囉！\n固定量血糖，是照顧自己最好的習慣 💗`;
+                        customMsg = `${parseInt(chosenTime)}點血糖 ${val} mg/dL 紀錄好囉！\n固定量血糖，是照顧自己最好的習慣 💗`;
                     } else {
                         const msgs = ["太棒了！每一筆紀錄都是愛自己的證明。", "持之以恆，健康的花園會越開越美麗！", "很棒的紀錄！今天的你也辛苦了。", "又完成了一次紀錄，離健康目標更近一步囉！", "超讚！植物們因為你的努力而開心地生長著。"];
                         customMsg = msgs[Math.floor(Math.random() * msgs.length)];
@@ -1968,16 +1976,20 @@
                 const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayBP = getDayBP(dateStr);
                 const dayGlu = getDayGlucose(dateStr);
-                const hasAny = ['早上', '晚上'].some(p => dayBP[p].length || dayGlu[p].length);
-                if (!hasAny) continue;
+                const hasBP = dayBP['早上'].length > 0 || dayBP['晚上'].length > 0;
+                if (!hasBP && dayGlu.length === 0) continue;
 
-                // 每格：血壓 (含脈搏) 在上，血糖接在下面
-                const cellOf = (p, cls) => {
-                    const html = dayBP[p].map(bp => bpEntry(bp, cls)).join('') + dayGlu[p].map(gluEntry).join('');
-                    return html || dash;
-                };
+                const cellOf = (p, cls) => dayBP[p].map(bp => bpEntry(bp, cls)).join('') || dash;
                 const week = weekNames[new Date(year, month - 1, d).getDay()];
-                rows += `<tr><td>${month}/${d} (${week})</td><td>${cellOf('早上', 'bp-am')}</td><td>${cellOf('晚上', 'bp-pm')}</td></tr>`;
+                const rowCount = (hasBP ? 1 : 0) + (dayGlu.length ? 1 : 0);
+                const dateCell = `<td rowspan="${rowCount}">${month}/${d}<br>(${week})</td>`;
+
+                // 第一列：早上 / 晚上血壓 (含脈搏)
+                if (hasBP) rows += `<tr>${dateCell}<td>${cellOf('早上', 'bp-am')}</td><td>${cellOf('晚上', 'bp-pm')}</td></tr>`;
+                // 第二列：當天所有血糖，橫跨早上和晚上，左右排列
+                if (dayGlu.length) {
+                    rows += `<tr class="${hasBP ? 'glu-row' : ''}">${hasBP ? '' : dateCell}<td colspan="2"><div class="glu-list">${dayGlu.map(gluEntry).join('')}</div></td></tr>`;
+                }
             }
 
             document.getElementById('bp-table-body').innerHTML = rows ||
@@ -2008,7 +2020,7 @@
                 <div class="detail-group" style="border-left-color: #3498db;"><div class="detail-time-title">💧 喝水紀錄 (今日總計: ${totalWater} ml)</div><div style="padding-left:5px;">${fmt('喝水')}</div></div>
                 <div class="detail-group" style="border-left-color: #2ecc71;"><div class="detail-time-title">👣 步數紀錄 (今日最高: ${maxSteps} 步)</div><div style="padding-left:5px;">${fmt('步數')}</div></div>
                 <div class="detail-group" style="border-left-color: #e84393;"><div class="detail-time-title" style="color: #e84393;">🩺 血壓 (mmHg)</div><div style="padding-left:5px;">${fmt('血壓', true)}</div></div>
-                <div class="detail-group" style="border-left-color: #16a085;"><div class="detail-time-title" style="color: #16a085;">🩸 血糖 (mg/dL)</div><div style="padding-left:5px;">${fmt('血糖', true)}</div></div>
+                <div class="detail-group" style="border-left-color: #16a085;"><div class="detail-time-title" style="color: #16a085;">🩸 血糖 (mg/dL)</div><div style="padding-left:5px;">${fmt('血糖')}</div></div>
                 <div class="detail-group danger"><div class="detail-time-title">💉 胰島素</div><div style="padding-left:5px;">${fmt('胰島素', true)}</div></div>
                 <div class="detail-group" style="border-left-color: var(--primary);"><div class="detail-time-title">💊 吃藥</div><div style="padding-left:5px;">${fmt('吃藥', true)}</div></div>
                 <div class="detail-group warning"><div class="detail-time-title">🤒 身體狀況</div><div style="padding-left:5px;">${fmt('身體狀況')}</div></div>
