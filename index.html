@@ -822,6 +822,30 @@
         };
         const ALL_FLOWERS = Object.keys(FLOWER_DIC);
 
+        // 🐕 圖鑑寵物區的介紹 (依圖鑑顯示順序；days = 連續紀錄幾天解鎖)
+        const PET_INFO = [
+            {
+                img: 'house.png', name: '溫馨狗屋', days: 7,
+                desc: '用木板釘成的小木屋，紅色的斜屋頂可以遮風擋雨，門口上方還掛著一塊骨頭招牌，一看就知道是小狗的家。',
+                tip: '小柴犬很戀家，總是在狗屋附近走來走去，不會跑太遠。'
+            },
+            {
+                img: 'dog_down.png', name: '小柴犬', days: 7,
+                desc: '柴犬來自日本，是日本六種本土犬裡體型最小的，1936 年被日本指定為「天然紀念物」。牠個性獨立、很愛乾淨，會像貓咪一樣自己理毛。',
+                tip: '「柴」這個名字有好幾種說法：有人說是因為牠以前在灌木叢（柴）裡幫忙打獵，也有人說是因為毛色像秋天的枯柴。柴犬情緒激動時，還會發出很大聲的「柴犬尖叫」喔！'
+            },
+            {
+                img: 'german_shepherd_house.png', name: '守衛犬舍', days: 30,
+                desc: '用一根根圓木頭疊起來的小木屋，配上鮮紅色的屋頂，門上還掛著木頭名牌，比柴犬的狗屋更堅固，剛好適合大狗住。',
+                tip: '德國牧羊犬會以犬舍為中心，在花園裡巡邏一大圈，範圍比小柴犬大很多。'
+            },
+            {
+                img: 'german_shepherd_bottom_left.png', name: '德國牧羊犬', days: 30,
+                desc: '德國牧羊犬來自德國，原本是幫忙放羊的工作犬。1899 年起，德國騎兵軍官史蒂芬尼茲開始有計畫地培育牠，後來成為警犬、搜救犬和導盲犬，是非常聰明能幹的狗狗。',
+                tip: '美國第一隻導盲犬「Buddy」就是一隻德國牧羊犬，牠陪著看不見的主人走遍各地，讓大家知道導盲犬有多厲害。'
+            }
+        ];
+
         // 🌸 圖鑑點花朵時顯示的介紹 (lang = 花語、desc = 介紹、tip = 小知識)
         // 還沒寫介紹的花，小視窗會顯示「介紹準備中」，之後一朵一朵補上即可
         const FLOWER_INFO = {
@@ -1683,6 +1707,8 @@
                 dogHouse.style.top = houseY + '%';
                 dogHouse.style.zIndex = Math.floor(houseY * 100 + houseX);
                 dogHouse.innerHTML = `<img src="house.png" class="pixel-prop">`;
+                dogHouse.style.cursor = 'pointer';
+                dogHouse.onclick = openGalleryModal; // 🌟 點狗屋直接打開成就圖鑑
                 floor.appendChild(dogHouse);
 
                 // 2. 讓小狗出生在狗屋旁邊
@@ -1741,6 +1767,8 @@
                     gsHouse.style.top = gsHouseY + '%';
                     gsHouse.style.zIndex = Math.floor(gsHouseY * 100 + gsHouseX);
                     gsHouse.innerHTML = `<img src="german_shepherd_house.png" class="pixel-prop">`;
+                    gsHouse.style.cursor = 'pointer';
+                    gsHouse.onclick = openGalleryModal; // 🌟 點犬舍直接打開成就圖鑑
                     floor.appendChild(gsHouse);
 
                     // 2. 讓德牧出生
@@ -1748,6 +1776,7 @@
                     let gsY = gsHouseY + 3;
                     const gsDog = document.createElement('div');
                     gsDog.className = 'garden-item moving-dog';
+                    gsDog.style.transition = 'left 2.5s linear, top 2.5s linear'; // 🌟 比小柴犬快 1.2 倍 (3s ÷ 1.2)
                     gsDog.style.left = gsX + '%';
                     gsDog.style.top = gsY + '%';
                     gsDog.style.zIndex = Math.floor(gsY * 100 + gsX);
@@ -1758,23 +1787,45 @@
                     gsDog.appendChild(gsImg);
                     floor.appendChild(gsDog);
 
-                    // 3. 啟動德牧的巡邏 AI (🌟 巡邏範圍擴大兩倍，更符合大狗特性)
+                    // 3. 啟動德牧的巡邏 AI (🌟 巡邏範圍 ±30，大狗跑得更遠)
+                    // 花園地板是斜 45 度的，範圍大了容易走出手機畫面，
+                    // 所以先用一個看不見的「探路分身」試站目標點，跑出畫面就重抽 (最多 12 次)
+                    const GS_RANGE = 30;
+                    const gsProbe = gsDog.cloneNode(true);
+                    gsProbe.style.visibility = 'hidden';
+                    gsProbe.style.transition = 'none';
+                    gsProbe.style.pointerEvents = 'none';
+                    floor.appendChild(gsProbe);
+                    const gsOnScreen = (x, y) => {
+                        gsProbe.style.left = x + '%';
+                        gsProbe.style.top = y + '%';
+                        const b = gsProbe.getBoundingClientRect();
+                        const inScreen = b.left >= 0 && b.right <= window.innerWidth
+                            && b.top >= window.innerHeight * 0.3 && b.bottom <= window.innerHeight;
+                        // 也不要躲到右下角的木牌後面
+                        const s = document.querySelector('.game-sidebar').getBoundingClientRect();
+                        const behindSign = b.right > s.left && b.left < s.right && b.bottom > s.top && b.top < s.bottom;
+                        return inScreen && !behindSign;
+                    };
+
                     window.gsWalkTimer = setInterval(() => {
                         if (isGardenPaused()) return;
 
                         let targetX = gsX;
                         let targetY = gsY;
+                        let found = false;
+                        for (let tries = 0; tries < 12 && !found; tries++) {
+                            targetX = gsX; targetY = gsY;
+                            if (Math.random() < 0.5) targetX = gsHouseX + (Math.random() * 2 - 1) * GS_RANGE;
+                            else targetY = gsHouseY + (Math.random() * 2 - 1) * GS_RANGE;
+                            found = gsOnScreen(targetX, targetY);
+                        }
+                        if (!found) { targetX = gsHouseX + 3; targetY = gsHouseY + 3; } // 找不到好位置就回家門口
 
-                        if (Math.random() < 0.5) {
-                            // 🌟 範圍從 20 擴大到 40 (-20 到 +20)
-                            targetX = gsHouseX + (Math.random() * 40 - 20);
-                            let diffX = targetX - gsX;
-                            gsImg.src = diffX > 0 ? 'german_shepherd_bottom_right.png' : 'german_shepherd_top_left.png';
+                        if (targetX !== gsX) {
+                            gsImg.src = targetX > gsX ? 'german_shepherd_bottom_right.png' : 'german_shepherd_top_left.png';
                         } else {
-                            // 🌟 範圍從 20 擴大到 40 (-20 到 +20)
-                            targetY = gsHouseY + (Math.random() * 40 - 20);
-                            let diffY = targetY - gsY;
-                            gsImg.src = diffY > 0 ? 'german_shepherd_bottom_left.png' : 'german_shepherd_top_right.png';
+                            gsImg.src = targetY > gsY ? 'german_shepherd_bottom_left.png' : 'german_shepherd_top_right.png';
                         }
 
                         gsX = targetX;
@@ -1782,7 +1833,7 @@
                         gsDog.style.left = gsX + '%';
                         gsDog.style.top = gsY + '%';
                         gsDog.style.zIndex = Math.floor(gsY * 100 + gsX);
-                    }, 4500);
+                    }, 3750); // 🌟 走路節奏也快 1.2 倍 (4500 ÷ 1.2)
                 }
             }
 
@@ -2426,24 +2477,15 @@
             const showDog = isPreviewDog || hasDog;
             const showGs = isPreviewDog || hasGs;
 
-            petContainer.innerHTML = `
-                <div class="gallery-item ${showDog ? '' : 'locked'}">
-                    <img src="house.png">
-                    <div class="gallery-item-name">${showDog ? '溫馨狗屋' : '???'}</div>
-                </div>
-                <div class="gallery-item ${showDog ? '' : 'locked'}">
-                    <img src="dog_down.png">
-                    <div class="gallery-item-name">${showDog ? '小柴犬' : '???'}</div>
-                </div>
-                <div class="gallery-item ${showGs ? '' : 'locked'}">
-                    <img src="german_shepherd_house.png">
-                    <div class="gallery-item-name">${showGs ? '守衛犬舍' : '???'}</div>
-                </div>
-                <div class="gallery-item ${showGs ? '' : 'locked'}">
-                    <img src="german_shepherd_bottom_left.png">
-                    <div class="gallery-item-name">${showGs ? '德國牧羊犬' : '???'}</div>
-                </div>
-            `;
+            // 點寵物卡片會跳出介紹 (內容在 PET_INFO)
+            petContainer.innerHTML = PET_INFO.map((p, i) => {
+                const unlocked = p.days === 7 ? showDog : showGs;
+                return `
+                <div class="gallery-item ${unlocked ? '' : 'locked'}" onclick="openPetInfo(${i}, ${unlocked})" style="cursor: pointer;">
+                    <img src="${p.img}">
+                    <div class="gallery-item-name">${unlocked ? p.name : '???'}</div>
+                </div>`;
+            }).join('');
 
             // 2. 產生花朵區塊 HTML
             const flowerContainer = document.getElementById('gallery-flowers');
@@ -2470,6 +2512,30 @@
         }
 
         // 🌸 點圖鑑裡的花：已收集的顯示介紹，還沒收集的只顯示剪影
+        // 🐕 點圖鑑裡的寵物：已入住的顯示介紹，還沒入住的告訴媽媽要連續紀錄幾天
+        function openPetInfo(index, isUnlocked) {
+            const p = PET_INFO[index];
+            const img = document.getElementById('flower-info-img');
+            img.src = p.img;
+            img.classList.toggle('locked', !isUnlocked);
+            const langEl = document.getElementById('flower-info-lang');
+            langEl.style.display = 'inline-block';
+            langEl.innerText = `解鎖條件：連續紀錄 ${p.days} 天`;
+            const tipEl = document.getElementById('flower-info-tip');
+
+            if (!isUnlocked) {
+                document.getElementById('flower-info-name').innerText = '???';
+                document.getElementById('flower-info-desc').innerText = `連續紀錄滿 ${p.days} 天，就會有新朋友搬進花園喔！\n加油，牠在等妳 🐾`;
+                tipEl.style.display = 'none';
+            } else {
+                document.getElementById('flower-info-name').innerText = p.name;
+                document.getElementById('flower-info-desc').innerText = p.desc;
+                tipEl.style.display = 'block';
+                tipEl.innerText = `💡 ${p.tip}`;
+            }
+            document.getElementById('flower-info-modal').style.display = 'flex';
+        }
+
         function openFlowerInfo(file) {
             const unlocked = JSON.parse(localStorage.getItem('unlocked_flowers')) || [...DEFAULT_UNLOCKED_FLOWERS];
             const isUnlocked = unlocked.includes(file);
