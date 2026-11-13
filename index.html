@@ -621,16 +621,22 @@
     <!-- 🩺 血壓紀錄表視窗 (疊在行事曆上方，返回就回到行事曆) -->
     <div id="page-bp" class="overlay-page">
         <div class="back-to-game-btn" onclick="closeOverlay('page-bp')">返回行事曆</div>
-        <div class="calendar-header">
-            <button class="calendar-nav-btn" onclick="changeMonth(-1)">◀</button>
-            <span id="bp-month-title"></span>
-            <button class="calendar-nav-btn" onclick="changeMonth(1)">▶</button>
+        <!-- 點這一區任何地方：血壓 ⇄ 血糖 切換 (點外面空白處則返回行事曆) -->
+        <div onclick="toggleBPView(event)" style="cursor: pointer; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; overflow: hidden; padding-bottom: 12px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+            <div class="calendar-header">
+                <button class="calendar-nav-btn" onclick="changeMonth(-1)">◀</button>
+                <span id="bp-month-title"></span>
+                <button class="calendar-nav-btn" onclick="changeMonth(1)">▶</button>
+            </div>
+            <table class="bp-table">
+                <thead id="bp-table-head"></thead>
+                <tbody id="bp-table-body"></tbody>
+            </table>
+            <div id="bp-switch-hint" class="bp-legend" style="margin-top: 10px; text-align: center; color: var(--primary); font-weight: bold;"></div>
+            <div id="bp-legend" class="bp-legend" style="margin-top: 6px; text-align: center;"></div>
         </div>
-        <table class="bp-table">
-            <thead><tr><th>日期</th><th>☀️ 早上</th><th>🌙 晚上</th></tr></thead>
-            <tbody id="bp-table-body"></tbody>
-        </table>
-        <div class="bp-legend" style="margin-top: 10px; text-align: center;">血壓 mmHg　♡&#xFE0E; 脈搏 (次/分)　🩸 血糖 (mg/dL)<br><span class="bp-high">偏高</span> = 收縮壓 ≥ 140 或舒張壓 ≥ 90<br><span class="bp-low">偏低</span> = 收縮壓 &lt; 90 或舒張壓 &lt; 60</div>
+        <!-- 表格區的下緣分隔：虛線以下是空白處，點一下返回行事曆 -->
+        <div onclick="closeOverlay('page-bp')" style="margin-top: 18px; border-top: 2px dashed rgba(0,0,0,0.15); padding-top: 8px; text-align: center; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">⬇ 虛線以下空白處，點一下返回行事曆</div>
     </div>
 
     <!-- 第四層：內部操作小彈窗 -->
@@ -1886,10 +1892,20 @@
                 .map(r => ({ value: parseInt(r.content), time: r.time || '' }))
                 .sort((a, b) => a.time.localeCompare(b.time));
         }
-        // 紀錄表用：血糖數值 + 黑字小時 (例如 14點)
+        // 24 小時制轉成長輩習慣的說法：08:30 → 早上8點、14:00 → 下午2點、21:00 → 晚上9點
+        function friendlyHour(time) {
+            const h = parseInt(time);
+            if (isNaN(h)) return '';
+            if (h < 5) return `凌晨${h === 0 ? 12 : h}點`;
+            if (h < 12) return `早上${h}點`;
+            if (h === 12) return '中午12點';
+            if (h < 18) return `下午${h - 12}點`;
+            return `晚上${h - 12}點`;
+        }
+        // 紀錄表用：血糖數值 + 黑字時間 (例如 早上8點)
         function gluEntry(g) {
-            const hour = parseInt(g.time);
-            return `<span class="glu-entry"><span class="glu-value">🩸 ${g.value}</span>${isNaN(hour) ? '' : `<span class="glu-hour">${hour}點</span>`}</span>`;
+            const label = friendlyHour(g.time);
+            return `<span class="glu-entry"><span class="glu-value">🩸 ${g.value}</span>${label ? `<span class="glu-hour">${label}</span>` : ''}</span>`;
         }
 
         function renderPeriodButtons(options) {
@@ -2062,7 +2078,7 @@
                             customMsg += "\n每天量血壓，是照顧自己最好的習慣 💗";
                         }
                     } else if (currentRecordType === '血糖') {
-                        customMsg = `${parseInt(chosenTime)}點血糖 ${val} mg/dL 紀錄好囉！\n固定量血糖，是照顧自己最好的習慣 💗`;
+                        customMsg = `${friendlyHour(chosenTime)}血糖 ${val} mg/dL 紀錄好囉！\n固定量血糖，是照顧自己最好的習慣 💗`;
                     } else {
                         const msgs = ["太棒了！每一筆紀錄都是愛自己的證明。", "持之以恆，健康的花園會越開越美麗！", "很棒的紀錄！今天的你也辛苦了。", "又完成了一次紀錄，離健康目標更近一步囉！", "超讚！植物們因為你的努力而開心地生長著。"];
                         customMsg = msgs[Math.floor(Math.random() * msgs.length)];
@@ -2190,14 +2206,35 @@
         // =========================================
         // 🩺 血壓紀錄表 (跟行事曆同一個月份)
         // =========================================
+        // 紀錄表一次只顯示一種：'bp' = 血壓、'glu' = 血糖；每次打開都先看血壓
+        let bpViewMode = 'bp';
+
         function openBPPage() {
+            bpViewMode = 'bp';
             renderBPTable();
+            document.getElementById('page-bp').scrollTop = 0;
             openOverlay('page-bp');
+        }
+
+        // 點表格任何地方就切換血壓/血糖 (按鈕除外；點外面空白處由 overlay 自己處理返回)
+        function toggleBPView(e) {
+            if (e.target.closest('button, .back-to-game-btn')) return;
+            bpViewMode = bpViewMode === 'bp' ? 'glu' : 'bp';
+            renderBPTable();
         }
 
         function renderBPTable() {
             const year = currentDate.getFullYear(); const month = currentDate.getMonth() + 1;
-            document.getElementById('bp-month-title').innerText = `${year}年 ${month}月 血糖/血壓`;
+            const isBP = bpViewMode === 'bp';
+            document.getElementById('bp-month-title').innerText = `${year}年 ${month}月 ${isBP ? '血壓' : '血糖'}`;
+            document.getElementById('bp-table-head').innerHTML = isBP
+                ? '<tr><th>日期</th><th>☀️ 早上</th><th>🌙 晚上</th></tr>'
+                : '<tr><th>日期</th><th>🩸 血糖 (依時間)</th></tr>';
+            document.getElementById('bp-legend').innerHTML = isBP
+                ? '血壓 mmHg　♡&#xFE0E; 脈搏 (次/分)<br><span class="bp-high">偏高</span> = 收縮壓 ≥ 140 或舒張壓 ≥ 90<br><span class="bp-low">偏低</span> = 收縮壓 &lt; 90 或舒張壓 &lt; 60'
+                : '🩸 血糖 (mg/dL)　後面是量測的時間';
+            document.getElementById('bp-switch-hint').innerText = isBP ? '👆 點表格任一處，切換看血糖' : '👆 點表格任一處，切換看血壓';
+
             const weekNames = ['日', '一', '二', '三', '四', '五', '六'];
             const daysInMonth = new Date(year, month, 0).getDate();
             const dash = '<span style="color:var(--text-muted);">—</span>';
@@ -2205,26 +2242,25 @@
 
             for (let d = 1; d <= daysInMonth; d++) {
                 const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const dayBP = getDayBP(dateStr);
-                const dayGlu = getDayGlucose(dateStr);
-                const hasBP = dayBP['早上'].length > 0 || dayBP['晚上'].length > 0;
-                if (!hasBP && dayGlu.length === 0) continue;
-
-                const cellOf = (p, cls) => dayBP[p].map(bp => bpEntry(bp, cls)).join('') || dash;
                 const week = weekNames[new Date(year, month - 1, d).getDay()];
-                const rowCount = (hasBP ? 1 : 0) + (dayGlu.length ? 1 : 0);
-                const dateCell = `<td rowspan="${rowCount}">${month}/${d}<br>(${week})</td>`;
+                const dateCell = `<td>${month}/${d}<br>(${week})</td>`;
 
-                // 第一列：早上 / 晚上血壓 (含脈搏)
-                if (hasBP) rows += `<tr>${dateCell}<td>${cellOf('早上', 'bp-am')}</td><td>${cellOf('晚上', 'bp-pm')}</td></tr>`;
-                // 第二列：當天所有血糖，橫跨早上和晚上，左右排列
-                if (dayGlu.length) {
-                    rows += `<tr class="${hasBP ? 'glu-row' : ''}">${hasBP ? '' : dateCell}<td colspan="2"><div class="glu-list">${dayGlu.map(gluEntry).join('')}</div></td></tr>`;
+                if (isBP) {
+                    // 早上 / 晚上血壓 (含脈搏)
+                    const dayBP = getDayBP(dateStr);
+                    if (dayBP['早上'].length === 0 && dayBP['晚上'].length === 0) continue;
+                    const cellOf = (p, cls) => dayBP[p].map(bp => bpEntry(bp, cls)).join('') || dash;
+                    rows += `<tr>${dateCell}<td>${cellOf('早上', 'bp-am')}</td><td>${cellOf('晚上', 'bp-pm')}</td></tr>`;
+                } else {
+                    // 當天所有血糖，依時間左右排列
+                    const dayGlu = getDayGlucose(dateStr);
+                    if (dayGlu.length === 0) continue;
+                    rows += `<tr>${dateCell}<td><div class="glu-list">${dayGlu.map(gluEntry).join('')}</div></td></tr>`;
                 }
             }
 
             document.getElementById('bp-table-body').innerHTML = rows ||
-                `<tr><td colspan="3" style="color:var(--text-muted); padding: 30px 6px;">這個月還沒有血壓或血糖紀錄</td></tr>`;
+                `<tr><td colspan="3" style="color:var(--text-muted); padding: 30px 6px;">這個月還沒有${isBP ? '血壓' : '血糖'}紀錄</td></tr>`;
         }
 
         function openDetailModal(y, m, d) {
