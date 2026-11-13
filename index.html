@@ -742,7 +742,7 @@
                 </div>
 
                 <!-- 花朵區 -->
-                <div class="section-title" style="text-align: center;">🌸 花朵圖鑑 (<span id="gallery-flower-count">0/32</span>)</div>
+                <div class="section-title" style="text-align: center;">🌸 花朵圖鑑 (<span id="gallery-flower-count">0/40</span>)</div>
                 <div id="gallery-flowers" class="gallery-grid">
                     <!-- JS 動態產生 -->
                 </div>
@@ -775,7 +775,7 @@
         const isPreviewDog = false; // true: 預覽模式，會直接顯示小狗與狗屋，方便測試；false: 正式模式，需達成條件才會出現
 
 
-        // 🌟 32 種花的中英文對照表 (全站共用，新增花朵只要改這裡) 🌟
+        // 🌟 40 種花的中英文對照表 (全站共用，新增花朵只要改這裡) 🌟
         const FLOWER_DIC = {
             'flower_camellia.png': '山茶花', 'flower_carnation.png': '康乃馨', 'flower_cherryblossom.png': '櫻花',
             'flower_chrysanthemum.png': '菊花', 'flower_daffodil.png': '水仙', 'flower_daisy.png': '雛菊',
@@ -787,7 +787,13 @@
             'flower_sunflower.png': '向日葵', 'flower_tulip.png': '鬱金香', 'flower_violet.png': '紫羅蘭',
             'flower_begonia.png': '秋海棠', 'flower_bellflower.png': '桔梗', 'flower_bluebell.png': '藍鈴花',
             'flower_cosmos.png': '波斯菊', 'flower_pansy.png': '三色堇', 'flower_plumeria.png': '雞蛋花',
-            'flower_snapdragon.png': '金魚草', 'flower_zinnia.png': '百日菊'
+            'flower_snapdragon.png': '金魚草', 'flower_zinnia.png': '百日菊',
+            // 🌟 第 7 批新增 (4 種)
+            'flower_dahlia.png': '大麗花', 'flower_hyacinth.png': '風信子', 
+            'flower_crocus.png': '番紅花', 'flower_geranium.png': '天竺葵',
+            // 🌟 第 8 批新增 (4 種)
+            'flower_freesia.png': '小蒼蘭', 'flower_snowdrop.png': '雪花蓮', 
+            'flower_amaryllis.png': '孤挺花', 'flower_primrose.png': '報春花'
         };
         const ALL_FLOWERS = Object.keys(FLOWER_DIC);
         // 預設解鎖 4 種經典花朵：玫瑰、向日葵、鬱金香、雛菊
