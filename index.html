@@ -1286,6 +1286,7 @@
                     // 記錄到本地，保證下次不會再跳
                     localStorage.setItem('dog_unlocked_notified', 'true');
                     localStorage.setItem('dog_unlock_date', todayDateStr);
+                    addNotice('pet', 'dog_down.png');
 
                     // 延遲 1.5 秒再跳出，讓媽媽先進來看到漂亮的花園再給驚喜
                     setTimeout(() => {
@@ -1299,6 +1300,7 @@
                     const todayDateStr = getFormattedDate(new Date());
                     localStorage.setItem('gs_unlocked_notified', 'true');
                     localStorage.setItem('gs_unlock_date', todayDateStr);
+                    addNotice('pet', 'german_shepherd_bottom_left.png');
                     setTimeout(() => {
                         document.getElementById('unlock-gs-modal').style.display = 'flex';
                     }, 1500);
@@ -1513,6 +1515,7 @@
                 localStorage.setItem('unlocked_flowers', JSON.stringify(unlocked));
                 // 🌟 記錄最新獲得的花朵，供佈告欄顯示 🌟
                 localStorage.setItem('latest_unlocked_flower', JSON.stringify({ file, date: getFormattedDate(new Date()) }));
+                addNotice('flower', file);
                 console.log("🎉 解鎖新花朵！", file);
                 return { file, isNew: true };
             }
@@ -2583,12 +2586,18 @@
 
             const periodOrder = {'早':1,'早上':1,'中':2,'晚':3,'晚上':3,'睡前':4};
             const fmt = (type, isMed=false) => {
-                const items = records.filter(r => r.type === type);
+                let items = records.filter(r => r.type === type);
                 if (items.length === 0) return `<div class="detail-item" style="color:var(--text-muted); font-size: 0.85rem; padding-left: 5px;">無</div>`;
+                // 👣 步數一天可能按很多次，只列最新 5 筆，避免畫面拉很長
+                let hiddenNote = '';
+                if (type === '步數' && items.length > STEP_DETAIL_LIMIT) {
+                    items = items.slice().sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-STEP_DETAIL_LIMIT);
+                    hiddenNote = `<div class="detail-item" style="color:var(--text-muted); font-size: 0.8rem; padding-left: 5px;">(只顯示最新 ${STEP_DETAIL_LIMIT} 筆)</div>`;
+                }
                 if(isMed) items.sort((a,b) => (periodOrder[a.period]||99) - (periodOrder[b.period]||99));
                 // 血壓、血糖的時間是代表值 (08:00/20:00)，不顯示
                 const timeTag = i => FIXED_TIME_TYPES.includes(type) ? '' : `<span class="tag">${escapeHtml(i.time)}</span>`;
-                return items.map(i => `<div class="detail-item" style="padding-left: 5px;"><div style="flex:1; color:var(--text-color);">${isMed?'<b>['+escapeHtml(i.period||'未分類')+']</b> ':''}${escapeHtml(i.content)}</div>${timeTag(i)}</div>`).join('');
+                return items.map(i => `<div class="detail-item" style="padding-left: 5px;"><div style="flex:1; color:var(--text-color);">${isMed?'<b>['+escapeHtml(i.period||'未分類')+']</b> ':''}${escapeHtml(i.content)}</div>${timeTag(i)}</div>`).join('') + hiddenNote;
             };
 
             let totalWater = 0; records.filter(r => r.type === '喝水').forEach(r => { totalWater += (parseInt(r.content) || 0); });
@@ -2649,66 +2658,81 @@
             }
         }
 
-        // 🌟 更新佈告欄顯示狀態 (小狗與最新花朵 - 緊湊排版版)
-        function updateNoticeBoard() {
-            const hasDog = localStorage.getItem('dog_unlocked_notified');
-            const unlockDogDate = localStorage.getItem('dog_unlock_date');
-            const latestFlowerStr = localStorage.getItem('latest_unlocked_flower');
+        // =========================================
+        // 📋 佈告欄：每次新獲得花朵/狗狗都記一筆，只顯示最近 5 天的消息，新的排在最上面
+        // 點一下消息就打開那朵花/那隻狗的介紹
+        // =========================================
+        const NOTICE_DAYS = 5;
+        const STEP_DETAIL_LIMIT = 5;
+        function getNotices() {
+            try { return JSON.parse(localStorage.getItem('notice_events') || '[]'); } catch (e) { return []; }
+        }
+        function addNotice(kind, file) {
+            migrateNotices(); // 先把舊版資料轉過來，再加這一筆 (同一天同一個就不重複記)
+            const list = getNotices();
+            const date = getFormattedDate(new Date());
+            if (list.some(n => n.kind === kind && n.file === file && n.date === date)) return;
+            list.push({ kind, file, date, ts: Date.now() });
+            localStorage.setItem('notice_events', JSON.stringify(list.slice(-30)));
+        }
+        // 舊版只存「最新一朵花」和狗狗解鎖日，第一次升級時轉成新的消息清單
+        function migrateNotices() {
+            if (localStorage.getItem('notice_events') !== null) return;
+            const list = [];
+            try {
+                const lf = JSON.parse(localStorage.getItem('latest_unlocked_flower') || 'null');
+                if (lf && lf.file) list.push({ kind: 'flower', file: lf.file, date: lf.date, ts: 0 });
+            } catch (e) {}
+            const dogDate = localStorage.getItem('dog_unlock_date');
+            if (dogDate) list.push({ kind: 'pet', file: 'dog_down.png', date: dogDate, ts: 0 });
+            const gsDate = localStorage.getItem('gs_unlock_date');
+            if (gsDate) list.push({ kind: 'pet', file: 'german_shepherd_bottom_left.png', date: gsDate, ts: 0 });
+            localStorage.setItem('notice_events', JSON.stringify(list));
+        }
+        function noticeDaysAgo(dateStr) {
+            const today = new Date(getFormattedDate(new Date()) + 'T00:00:00');
+            return Math.round((today - new Date(dateStr + 'T00:00:00')) / (24 * 60 * 60 * 1000));
+        }
 
+        function updateNoticeBoard() {
+            migrateNotices();
             const noticeList = document.getElementById('notice-list');
             const noticeEmpty = document.getElementById('notice-empty');
+            const dayLabel = ['今天', '昨天', '前天', '3天前', '4天前'];
 
-            let noticesHTML = '';
+            const recent = getNotices()
+                .map(n => ({ ...n, ago: noticeDaysAgo(n.date) }))
+                .filter(n => n.ago >= 0 && n.ago < NOTICE_DAYS)
+                .sort((a, b) => a.ago - b.ago || b.ts - a.ts);
 
-            // 1. 小狗入住通知 (縮小圖示為 1.2rem，字體等比例縮小)
-            if (hasDog) {
-                noticesHTML += `
-                <div style="background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid var(--warning); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="font-size: 1.2rem;">🐕</div>
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">獲得小柴犬</span>
-                            <span style="font-size: 0.65rem; color: var(--text-muted);">連續紀錄滿 7 天</span>
-                        </div>
+            const noticesHTML = recent.map(n => {
+                let title, sub, color, onclick;
+                if (n.kind === 'pet') {
+                    const idx = PET_INFO.findIndex(p => p.img === n.file);
+                    const pet = PET_INFO[idx];
+                    if (!pet) return '';
+                    title = `${pet.name}搬進花園了！`;
+                    sub = `連續紀錄滿 ${pet.days} 天・點我看介紹`;
+                    color = pet.days >= 30 ? 'var(--danger)' : 'var(--warning)';
+                    onclick = `openPetInfo(${idx}, true)`;
+                } else {
+                    if (!FLOWER_DIC[n.file]) return '';
+                    title = `發現新花「${FLOWER_DIC[n.file]}」！`;
+                    sub = '已收進圖鑑・點我看介紹';
+                    color = 'var(--primary)';
+                    onclick = `openFlowerInfo('${n.file}')`;
+                }
+                return `
+                <div onclick="${onclick}" style="cursor: pointer; background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid ${color}; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <img src="${n.file}" style="width: 1.6rem; height: 1.6rem; object-fit: contain; flex-shrink: 0;">
+                    <div style="display: flex; flex-direction: column; flex: 1; min-width: 0;">
+                        <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">${title}</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">${sub}</span>
                     </div>
-                    <span style="font-size: 0.65rem; background: var(--warning); color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${unlockDogDate || '最近'}</span>
+                    <span style="font-size: 0.65rem; background: ${color}; color: white; padding: 2px 6px; border-radius: 10px; font-weight: bold; flex-shrink: 0;">${dayLabel[n.ago]}</span>
+                    <span style="color: var(--text-muted); font-size: 1rem; flex-shrink: 0;">›</span>
                 </div>`;
-            }
-
-            // 1.5 德國牧羊犬入住通知
-            const hasGs = localStorage.getItem('gs_unlocked_notified');
-            const unlockGsDate = localStorage.getItem('gs_unlock_date');
-            if (hasGs) {
-                noticesHTML += `
-                <div style="background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid var(--danger); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="german_shepherd_bottom_left.png" style="width: 1.2rem; height: 1.2rem; object-fit: contain;">
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">獲得德國牧羊犬</span>
-                            <span style="font-size: 0.65rem; color: var(--text-muted);">連續紀錄滿 30 天</span>
-                        </div>
-                    </div>
-                    <span style="font-size: 0.65rem; background: var(--danger); color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${unlockGsDate || '最近'}</span>
-                </div>`;
-            }
-
-            // 2. 最新解鎖花朵通知 (縮小圖片為 1.2rem)
-            if (latestFlowerStr) {
-                const latestFlower = JSON.parse(latestFlowerStr);
-                const fName = FLOWER_DIC[latestFlower.file] || '新圖鑑';
-
-                noticesHTML += `
-                <div style="background: #fff; padding: 8px 10px; border-radius: 8px; border-left: 3px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="${latestFlower.file}" style="width: 1.2rem; height: 1.2rem; object-fit: contain; filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.2));">
-                        <div style="display: flex; flex-direction: column;">
-                            <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-color);">發現 ${fName}！</span>
-                            <span style="font-size: 0.65rem; color: var(--text-muted);">花園出現新種子</span>
-                        </div>
-                    </div>
-                    <span style="font-size: 0.65rem; background: var(--primary); color: white; padding: 2px 5px; border-radius: 10px; font-weight: bold;">${latestFlower.date || '最近'}</span>
-                </div>`;
-            }
+            }).join('');
 
             // 判斷要顯示通知清單，還是顯示「無新公告」
             if (noticesHTML !== '') {
