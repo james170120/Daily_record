@@ -764,6 +764,20 @@
     </div>
 
 
+    <!-- 🔑 花園通行碼 (第一次打開或通行碼更換時才會出現，不能關掉) -->
+    <div id="key-modal" class="modal" style="z-index: 200;">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <div style="font-size: 3rem;">🔑</div>
+            <h2 style="color: var(--primary); margin: 10px 0 5px;">請輸入花園通行碼</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin: 0 0 15px;">只要輸入一次，之後打開就會自動進入花園</p>
+            <input type="password" id="key-input" autocomplete="off" autocapitalize="off" spellcheck="false"
+                   onkeydown="if (event.key === 'Enter') submitGardenKey()"
+                   style="width: 100%; box-sizing: border-box; padding: 14px; font-size: 1.1rem; border-radius: 10px; border: 1px solid var(--border); text-align: center;">
+            <p id="key-modal-msg" style="color: var(--danger); font-size: 0.95rem; min-height: 1.4em; margin: 10px 0;"></p>
+            <button class="submit-btn" id="key-submit-btn" onclick="submitGardenKey()" style="width: 100%;">進入花園</button>
+        </div>
+    </div>
+
     <!-- 🌟 自訂成功提示彈窗 (取代原本的 alert) 🌟 -->
     <div id="success-modal" class="modal">
         <div class="modal-content" style="text-align: center; padding: 30px 20px;">
@@ -1251,25 +1265,71 @@
         async function sendErrorLog(errorMsg) {
             const now = new Date();
             const payload = { date: getFormattedDate(now), time: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), period: '', type: '系統報錯', content: errorMsg, category: 'error' };
+            if (!getGardenKey()) return; // 還沒輸入通行碼就送不出去
             try {
                 await fetch(N8N_POST_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Garden-Auth': 'mama-2026'  /* 🌟 帶上暗號 🌟 */
-                    },
+                    headers: gardenHeaders(true),
                     body: JSON.stringify(payload)
                 });
             } catch(e) {}
         }
 
+        // =========================================
+        // 🔑 花園通行碼：第一次打開時輸入一次，之後存在這支手機裡自動帶上
+        // 程式碼裡不寫暗號，GitHub 上看不到；對不對由 n8n 判斷
+        // =========================================
+        const GARDEN_KEY_STORE = 'garden_key';
+        function getGardenKey() {
+            try { return localStorage.getItem(GARDEN_KEY_STORE) || ''; } catch (e) { return ''; }
+        }
+        function gardenHeaders(json) {
+            const h = { 'X-Garden-Auth': getGardenKey() };
+            if (json) h['Content-Type'] = 'application/json';
+            return h;
+        }
+        function isKeyRejected(response) { return response.status === 401 || response.status === 403; }
+
+        function showKeyModal(msg) {
+            document.getElementById('key-modal-msg').innerText = msg || '';
+            document.getElementById('key-submit-btn').innerText = '進入花園';
+            document.getElementById('key-modal').style.display = 'flex';
+        }
+        // 通行碼被拒絕 (例如 n8n 換了新暗號)：清掉舊的，請重新輸入
+        function handleKeyRejected() {
+            try { localStorage.removeItem(GARDEN_KEY_STORE); } catch (e) {}
+            showKeyModal('花園通行碼已經更換，請重新輸入');
+        }
+
+        async function submitGardenKey() {
+            const input = document.getElementById('key-input');
+            const btn = document.getElementById('key-submit-btn');
+            const key = input.value.trim();
+            if (!key) return showKeyModal('請先輸入通行碼');
+            btn.innerText = '確認中...';
+            try {
+                // 先用這組通行碼試讀一次，n8n 說對了才存起來
+                const response = await fetch(N8N_GET_URL + '?t=' + Date.now(), { headers: { 'X-Garden-Auth': key } });
+                if (isKeyRejected(response)) return showKeyModal('通行碼不對，請再確認一次');
+                if (!response.ok) throw new Error('網路回應異常');
+                localStorage.setItem(GARDEN_KEY_STORE, key);
+                input.value = '';
+                closeModal('key-modal');
+                loadData();
+            } catch (e) {
+                showKeyModal('網路好像不太穩，請稍後再試一次');
+            }
+        }
+
         async function loadData() {
             lastLoadTime = Date.now();
+            if (!getGardenKey()) return showKeyModal();
             try {
-                // 🌟 GET 請求帶上暗號 🌟
+                // 🌟 GET 請求帶上這支手機存的通行碼 🌟
                 const response = await fetch(N8N_GET_URL + "?t=" + new Date().getTime(), {
-                    headers: { 'X-Garden-Auth': 'mama-2026' }
+                    headers: gardenHeaders(false)
                 });
+                if (isKeyRejected(response)) return handleKeyRejected();
                 if (!response.ok) throw new Error("網路回應異常");
                 const data = await response.json();
                 recordsDB = {};
@@ -2432,12 +2492,14 @@
             try {
                 const response = await fetch(N8N_POST_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Garden-Auth': 'mama-2026' /* 🌟 帶上暗號 🌟 */
-                    },
+                    headers: gardenHeaders(true),
                     body: JSON.stringify(payload)
                 });
+                if (isKeyRejected(response)) {
+                    document.getElementById('submit-btn').innerText = '💾 儲存紀錄';
+                    closeModal('input-modal');
+                    return handleKeyRejected();
+                }
                 if (response.ok) {
                     beeNoticeHold = true; // 儲存後先等恭喜訊息決定好，蜜蜂通知不要搶著跳
                     await loadData();
@@ -2746,9 +2808,9 @@
             try {
                 const n8nWeatherUrl = 'https://orthodox-oarfish.pikapod.net/webhook/ffaf46df-c23c-4613-8c5b-5095c84da6ea';
 
-                // 🌟 天氣 GET 請求帶上暗號 🌟
+                // 🌟 天氣 GET 請求帶上通行碼 🌟
                 const response = await fetch(n8nWeatherUrl, {
-                    headers: { 'X-Garden-Auth': 'mama-2026' }
+                    headers: gardenHeaders(false)
                 });
                 const data = await response.json();
 
