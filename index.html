@@ -427,6 +427,9 @@
         /* =========================================
            4. 內部小彈窗 (新增紀錄、明細)
            ========================================= */
+        .step-sync-icon { font-size: 3.5rem; display: inline-block; }
+        .step-sync-icon.walking { animation: stepWalk 0.9s ease-in-out infinite; }
+        @keyframes stepWalk { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-8px) rotate(8deg); } }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.85); align-items: center; justify-content: center; z-index: 100; }
         .modal-content { background: var(--bg-color); padding: 20px; border-radius: 16px; width: 92%; max-width: 400px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; }
         .modal-header { font-size: 1.2rem; color: var(--accent); font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
@@ -589,7 +592,7 @@
         <div class="grid-3">
             <button class="record-btn" onclick="openInputModal('胰島素', 'medical')" style="border-bottom: 3px solid var(--danger);"><span class="icon">💉</span>胰島素</button>
             <button class="record-btn" onclick="openInputModal('吃藥', 'medical')" style="border-bottom: 3px solid var(--primary);"><span class="icon">💊</span>吃藥</button>
-            <button class="record-btn" onclick="openInputModal('步數', 'steps')" style="border-bottom: 3px solid #2ecc71;"><span class="icon">👣</span>步數</button>
+            <button class="record-btn" onclick="openStepsButton()" style="border-bottom: 3px solid #2ecc71;"><span class="icon">👣</span>步數</button>
             <button class="record-btn" onclick="openInputModal('血壓', 'bp')" style="border-bottom: 3px solid #e84393;"><span class="icon">🩺</span>血壓</button>
             <button class="record-btn" onclick="openInputModal('血糖', 'glucose')" style="border-bottom: 3px solid #16a085;"><span class="icon">🩸</span>血糖</button>
             <button class="record-btn" onclick="openInputModal('身體狀況', 'status')" style="border-bottom: 3px solid var(--warning);"><span class="icon">👩‍⚕️</span>身體狀況</button>
@@ -761,8 +764,8 @@
         <div class="modal-content" style="text-align: center; padding: 30px 20px;">
             <h2 style="color: var(--primary); margin-top: 0;">🎉 紀錄成功！</h2>
             <p id="success-message" style="color: var(--text-color); font-size: 1.05rem; margin: 15px 0; line-height: 1.5;"></p>
-            <div class="seed-animation">🌰</div>
-            <p style="color: var(--accent); font-size: 1.1rem; font-weight: bold;">你獲得了一顆新種子！</p>
+            <div class="seed-animation" id="success-seed-icon">🌰</div>
+            <p id="success-seed-text" style="color: var(--accent); font-size: 1.1rem; font-weight: bold;">你獲得了一顆新種子！</p>
             <button class="submit-btn" onclick="closeModal('success-modal')" style="margin-top: 20px; width: 100%;">太棒了</button>
         </div>
     </div>
@@ -777,6 +780,26 @@
                 <span style="color: var(--text-muted); font-size: 0.9rem;">圖鑑裡收集到的花都還在 🌸</span>
             </p>
             <button class="submit-btn" onclick="closeModal('wither-modal')" style="width: 100%; background: #8d6e63; box-shadow: 0 4px 10px rgba(141, 110, 99, 0.4);">我知道了</button>
+        </div>
+    </div>
+
+    <!-- 👣 步數自動上傳視窗 (點步數按鈕 → 啟動 iPhone 捷徑「上傳步數」) -->
+    <div id="step-sync-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <div id="step-sync-icon" class="step-sync-icon">👣</div>
+            <h2 id="step-sync-title" style="color: #27ae60; margin: 10px 0 0; font-size: 1.3rem;"></h2>
+            <p id="step-sync-msg" style="color: var(--text-color); font-size: 1.05rem; line-height: 1.6; margin: 15px 0;"></p>
+            <div id="step-sync-actions" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+    </div>
+
+    <!-- 🐝 走路達標的蜜蜂通知 (當天沒看到的話，隔天打開補跳) -->
+    <div id="bee-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <div style="font-size: 3.5rem;">🐝</div>
+            <h2 style="color: var(--warning); margin: 10px 0 0;">蜜蜂飛來花園囉！</h2>
+            <p id="bee-message" style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6; margin: 15px 0; white-space: pre-line;"></p>
+            <button class="submit-btn" onclick="closeModal('bee-modal')" style="width: 100%; background: var(--warning); box-shadow: 0 4px 10px rgba(243,156,18,0.4);">好開心</button>
         </div>
     </div>
 
@@ -1289,6 +1312,8 @@
                 updateNoticeBoard();
                 // 🥀 剛好觸發凋謝的這次上線，跳一次小視窗
                 showWitherNotice();
+                // 🐝 今天或昨天走路達標、還沒看過通知的，補跳蜜蜂通知
+                checkBeeNotice();
             } catch (error) { sendErrorLog(`讀取失敗: ${error.message}`); }
         }
 
@@ -1307,8 +1332,141 @@
         document.addEventListener('visibilitychange', () => {
             refreshPauseState();
             // 回到 App 且距離上次讀取超過 5 分鐘，就重新讀取，讓種子成長與日夜切換保持最新
-            if (!document.hidden && Date.now() - lastLoadTime > 5 * 60 * 1000) loadData();
+            if (!document.hidden && Date.now() - lastLoadTime > 5 * 60 * 1000 && !stepSync) loadData();
         });
+
+        // =========================================
+        // 👣 步數自動上傳：點步數按鈕 → 跳到 iPhone 捷徑「上傳步數」→ 回到花園後確認有沒有收到
+        // 捷徑會把「健康」App 今天的總步數 POST 到 n8n (格式跟手動輸入一樣)
+        // =========================================
+        const STEP_SHORTCUT_NAME = '上傳步數';
+        const BEE_STEP_GOAL = 3000;
+        let stepSync = null;       // 正在同步時 = { before: 送出前今天的步數筆數, leftApp: 是否已跳去捷徑 }
+        let beeNoticeHold = false; // 儲存紀錄中，先不要跳蜜蜂通知
+
+        function stepRewardMsg(maxSteps) {
+            if (maxSteps >= BEE_STEP_GOAL) return `太厲害了！目標達成！\n本日步數已達 ${maxSteps} 步，為花園吸引了一隻勤勞的蜜蜂 🐝！`;
+            if (maxSteps >= 1500) return `已經走了 ${maxSteps} 步囉！\n再走一段路就能吸引蜜蜂來採蜜了，繼續加油 👣！`;
+            return `今天走了 ${maxSteps} 步，紀錄成功！\n多走動對身體很好喔，繼續保持！`;
+        }
+
+        function todayStepInfo() {
+            const recs = (recordsDB[getFormattedDate(new Date())] || []).filter(r => r.type === '步數');
+            const steps = recs.map(r => parseInt(r.content) || 0);
+            return { count: recs.length, autoCount: recs.filter(isShortcutStep).length, max: steps.length ? Math.max(...steps) : 0 };
+        }
+
+        function showSuccessModal(msg, gotSeed) {
+            document.getElementById('success-message').innerText = msg;
+            document.getElementById('success-seed-icon').style.display = gotSeed ? '' : 'none';
+            document.getElementById('success-seed-text').innerText = gotSeed
+                ? '你獲得了一顆新種子！'
+                : '今天的步數種子已經領過囉，步數幫您更新好了 👣';
+            document.getElementById('success-modal').style.display = 'flex';
+        }
+
+        function openStepsButton() {
+            // 捷徑只拿得到「今天」的步數，補登以前的日子還是用手動輸入
+            if (targetRecordDate !== getFormattedDate(new Date())) return openInputModal('步數', 'steps');
+            startStepSync();
+        }
+
+        function setStepSyncView(icon, title, msg, actions, walking) {
+            const iconEl = document.getElementById('step-sync-icon');
+            iconEl.innerText = icon;
+            iconEl.classList.toggle('walking', !!walking);
+            document.getElementById('step-sync-title').innerText = title;
+            document.getElementById('step-sync-msg').innerHTML = msg;
+            document.getElementById('step-sync-actions').innerHTML = actions.map(([label, fn, plain]) =>
+                `<button class="submit-btn" onclick="${fn}" style="width: 100%;${plain ? ' background: #fff; color: var(--text-muted); border: 1px solid var(--border); box-shadow: none;' : ''}">${label}</button>`
+            ).join('');
+            document.getElementById('step-sync-modal').style.display = 'flex';
+        }
+
+        function startStepSync() {
+            const sync = { before: todayStepInfo().count, leftApp: false };
+            stepSync = sync;
+            setStepSyncView('👣', '步數上傳中，請稍等一下',
+                '手機會先跳到「捷徑」幫您把今天的步數送過來，<br>跑完之後，請再回到花園，<br>就能看到今天走了幾步囉 🌿',
+                [['✏️ 改成自己輸入步數', 'stepSyncManual()', true]], true);
+            // 停一下讓媽媽看清楚說明，再跳去捷徑
+            setTimeout(() => {
+                if (stepSync !== sync) return;
+                location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(STEP_SHORTCUT_NAME);
+                // 5 秒後畫面都沒離開 = 捷徑沒有打開 (例如在電腦上)
+                setTimeout(() => { if (stepSync === sync && !sync.leftApp) showStepSyncFail(); }, 5000);
+            }, 1500);
+        }
+
+        async function checkStepSyncResult(sync) {
+            setStepSyncView('⏳', '正在確認步數…', '馬上就好，請稍等一下喔', [], false);
+            // 捷徑剛送出，資料可能要幾秒才進得來，最多等 4 次
+            for (let i = 0; i < 4; i++) {
+                await loadData();
+                if (stepSync !== sync) return;
+                const info = todayStepInfo();
+                if (info.count > sync.before) {
+                    stepSync = null;
+                    closeModal('step-sync-modal');
+                    if (info.max >= BEE_STEP_GOAL) markBeeNotified(getFormattedDate(new Date()));
+                    // 今天第一筆捷徑步數才有種子，之後再按只更新步數
+                    showSuccessModal(stepRewardMsg(info.max), info.autoCount <= 1);
+                    return;
+                }
+                await new Promise(r => setTimeout(r, 2000));
+            }
+            if (stepSync === sync) showStepSyncFail();
+        }
+
+        function showStepSyncFail() {
+            stepSync = null;
+            setStepSyncView('😅', '這次沒有收到步數',
+                '可能是網路不太穩，或捷徑還沒設定好。<br>可以再試一次，或自己輸入步數喔！',
+                [['🔄 再試一次', 'startStepSync()'], ['✏️ 自己輸入步數', 'stepSyncManual()'], ['關閉', "closeModal('step-sync-modal')", true]], false);
+        }
+
+        function stepSyncManual() {
+            stepSync = null;
+            closeModal('step-sync-modal');
+            openInputModal('步數', 'steps');
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!stepSync) return;
+            if (document.hidden) stepSync.leftApp = true;          // 已經跳去捷徑了
+            else if (stepSync.leftApp) checkStepSyncResult(stepSync); // 從捷徑回來了
+        });
+
+        // =========================================
+        // 🐝 蜜蜂通知：今天或昨天步數達標，但還沒看過恭喜 → 打開遊戲時補跳一次
+        // (例如捷徑晚上自動上傳達標，媽媽隔天早上打開才看到)
+        // =========================================
+        function getBeeNotified() {
+            try { return JSON.parse(localStorage.getItem('bee_notified_dates') || '[]'); } catch (e) { return []; }
+        }
+        function markBeeNotified(dateStr) {
+            const list = getBeeNotified();
+            if (!list.includes(dateStr)) list.push(dateStr);
+            localStorage.setItem('bee_notified_dates', JSON.stringify(list.slice(-10)));
+        }
+        function checkBeeNotice() {
+            if (beeNoticeHold || stepSync) return;
+            const notified = getBeeNotified();
+            const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+            const lines = [];
+            [[getFormattedDate(yesterday), '昨天'], [getFormattedDate(new Date()), '今天']].forEach(([dateStr, label]) => {
+                const steps = (recordsDB[dateStr] || []).filter(r => r.type === '步數').map(r => parseInt(r.content) || 0);
+                const max = steps.length ? Math.max(...steps) : 0;
+                if (max >= BEE_STEP_GOAL && !notified.includes(dateStr)) {
+                    lines.push(`${label}走了 ${max} 步！`);
+                    markBeeNotified(dateStr);
+                }
+            });
+            if (!lines.length) return;
+            document.getElementById('bee-message').innerText =
+                lines.join('\n') + `\n\n${lines.length > 1 ? '有兩隻' : '有一隻'}勤勞的蜜蜂飛來花園採蜜囉 🌼\n走路對身體很好，繼續保持喔！`;
+            setTimeout(() => { document.getElementById('bee-modal').style.display = 'flex'; }, 1500);
+        }
 
         function openRecordPage(dateStr) {
             targetRecordDate = dateStr || getFormattedDate(new Date());
@@ -1337,6 +1495,10 @@
         // 🌸 花朵抽卡：每筆紀錄綁定一朵花
         // 開花 (滿 6 小時) 時抽卡並記住，移盆 (滿 8 小時) 後花園裡長的就是同一朵
         // =========================================
+        // 捷徑上傳的步數會帶 period: '捷徑'，用來跟手動輸入區分
+        const SHORTCUT_PERIOD = '捷徑';
+        function isShortcutStep(r) { return r.type === '步數' && r.period === SHORTCUT_PERIOD; }
+
         function getRecordKey(date, r) {
             return r.id != null ? `id:${r.id}` : `${date}|${r.time}|${r.type}|${r.content}`;
         }
@@ -1385,7 +1547,11 @@
             const now = new Date();
             const records = [];
             Object.keys(recordsDB).forEach(date => {
+                // 👣 捷徑上傳的步數一天只算一顆種子 (只留當天最早那筆)；手動輸入和其他紀錄不受限制
+                const extraAutoSteps = new Set(recordsDB[date].filter(isShortcutStep)
+                    .sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(1));
                 recordsDB[date].forEach(r => {
+                    if (extraAutoSteps.has(r)) return;
                     const dt = new Date(`${date}T${r.time}:00`);
                     if (!isNaN(dt.getTime()) && dt.getFullYear() >= 2026 && dt <= now) {
                         records.push({ key: getRecordKey(date, r), dt, age: (now - dt) / (1000 * 60 * 60) });
@@ -2155,7 +2321,9 @@
                     body: JSON.stringify(payload)
                 });
                 if (response.ok) {
+                    beeNoticeHold = true; // 儲存後先等恭喜訊息決定好，蜜蜂通知不要搶著跳
                     await loadData();
+                    beeNoticeHold = false;
                     closeModal('input-modal');
 
                     const typeRecords = recordsDB[targetRecordDate] || [];
@@ -2179,13 +2347,9 @@
                             customMsg = "喝水紀錄成功！保持水分充足，植物跟妳都會水噹噹喔！";
                         }
                     } else if (currentRecordType === '步數') {
-                        if (maxSteps >= 3000) {
-                            customMsg = `太厲害了！目標達成！\n本日步數已達 ${maxSteps} 步，為花園吸引了一隻勤勞的蜜蜂 🐝！`;
-                        } else if (maxSteps >= 1500) {
-                            customMsg = `已經走了 ${maxSteps} 步囉！\n再走一段路就能吸引蜜蜂來採蜜了，繼續加油 👣！`;
-                        } else {
-                            customMsg = "步數紀錄成功！多走動對身體很好喔，繼續保持！";
-                        }
+                        customMsg = stepRewardMsg(maxSteps);
+                        // 這邊已經恭喜過了，蜜蜂通知就不用再跳
+                        if (isToday && maxSteps >= BEE_STEP_GOAL) markBeeNotified(targetRecordDate);
                     } else if (currentRecordType === '血壓') {
                         const savedBP = parseBP(val);
                         customMsg = `${selectedTimePeriod}血壓 ${savedBP.sys}/${savedBP.dia}${savedBP.pulse ? `、脈搏 ${savedBP.pulse}` : ''} 紀錄好囉！`;
@@ -2207,8 +2371,7 @@
                          customMsg += "\n(補登紀錄也成功算入獎勵囉！)";
                     }
 
-                    document.getElementById('success-message').innerText = customMsg;
-                    document.getElementById('success-modal').style.display = 'flex';
+                    showSuccessModal(customMsg, true);
                 } else { alert('❌ 上傳失敗'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄'; }
             } catch (error) { alert('❌ 連線錯誤'); document.getElementById('submit-btn').innerText = '💾 儲存紀錄'; sendErrorLog(error.message); }
         }
