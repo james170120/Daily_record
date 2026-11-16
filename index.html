@@ -244,6 +244,11 @@
         .grass-tuft { font-size: 1.2rem; opacity: 0.7; filter: none; }
 
         /* 左側大樹固定位 */
+        /* 🐦 青鳥小屋掛在大樹上 (2 點鐘方向)；青鳥大小約蝴蝶的 1.5 倍 */
+        .tree-birdhouse { position: absolute; left: 46%; top: 20%; width: 24%; line-height: 0; cursor: pointer; }
+        .flying-bluebird { position: absolute; left: 0; top: 0; z-index: 60; image-rendering: pixelated; pointer-events: none; will-change: transform; }
+        .tree-birdhouse-img { width: 100%; image-rendering: pixelated; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.3)); }
+        .tree-bluebird { position: absolute; width: 1.5rem; left: -6px; top: 38%; image-rendering: pixelated; pointer-events: none; }
         .big-tree-25d {
             font-size: 9rem;
             transform-origin: bottom center;
@@ -832,6 +837,19 @@
         </div>
     </div>
 
+    <!-- 🐦 青鳥小屋 60 天成就解鎖 Modal -->
+    <div id="unlock-bird-modal" class="modal">
+        <div class="modal-content" style="text-align: center; padding: 30px 20px;">
+            <h2 style="color: #3b6fd8; margin-top: 0;">🏆 60 天里程碑達成！</h2>
+            <img src="birdhouse.png" style="width: 5rem; image-rendering: pixelated; margin: 10px auto; display: block;">
+            <p style="color: var(--text-color); font-size: 1.1rem; line-height: 1.6;">
+                太了不起了！妳已經連續健康紀錄 <strong>60</strong> 天囉！<br><br>
+                大樹上掛起了一座「青鳥小屋」，還住進了一隻可愛的青鳥，快去花園找找看吧 🐦
+            </p>
+            <button class="submit-btn" onclick="closeModal('unlock-bird-modal')" style="background: #3b6fd8; box-shadow: 0 4px 10px rgba(59,111,216,0.4); margin-top: 20px; width: 100%;">去看看小屋</button>
+        </div>
+    </div>
+
     <!-- 🌟 成就圖鑑 Modal 🌟 -->
     <div id="gallery-modal" class="modal">
         <div class="modal-content" style="max-height: 90vh; padding: 20px 15px; width: 95%;">
@@ -934,6 +952,16 @@
                 img: 'german_shepherd_bottom_left.png', name: '德國牧羊犬', days: 30,
                 desc: '德國牧羊犬來自德國，原本是幫忙放羊的工作犬。1899 年起，德國騎兵軍官史蒂芬尼茲開始有計畫地培育牠，後來成為警犬、搜救犬和導盲犬，是非常聰明能幹的狗狗。',
                 tip: '美國第一隻導盲犬「Buddy」就是一隻德國牧羊犬，牠陪著看不見的主人走遍各地，讓大家知道導盲犬有多厲害。'
+            },
+            {
+                img: 'birdhouse.png', name: '青鳥小屋', days: 60,
+                desc: '用木板釘成的小鳥屋，斜斜的紅色屋頂可以遮雨，前面開了一個圓圓的小門，門下還有一塊小平台讓鳥兒停腳，整座小屋就立在一根樹枝柱子上。',
+                tip: '北美洲專門給青鳥住的鳥屋，圓門大約 3.8 公分寬，剛好讓青鳥進出，體型比較大的歐洲椋鳥就擠不進去，可以保護青鳥的家。'
+            },
+            {
+                img: 'bluebird_idle_right.png', name: '東藍鴝（青鳥）', days: 60,
+                desc: '東藍鴝是北美洲東部常見的小鳥，英文叫 Eastern Bluebird。公鳥背上是亮藍色、胸前是橘紅色、肚子是白色，母鳥的顏色比較淡。牠們主要吃昆蟲，冬天也會吃果實，是美國紐約州和密蘇里州的州鳥。',
+                tip: '青鳥的藍色不是色素，而是羽毛裡細小的構造把光線散射成藍色，所以羽毛壓碎後，藍色就不見了！在比利時作家梅特林克 1908 年的童話劇《青鳥》裡，青鳥是幸福的象徵。'
             }
         ];
 
@@ -1306,6 +1334,16 @@
                     }, 1500);
                 }
 
+                // 🐦 青鳥小屋 60 天解鎖
+                if (window.consecutiveDays >= 60 && !localStorage.getItem('bird_unlocked_notified')) {
+                    localStorage.setItem('bird_unlocked_notified', 'true');
+                    localStorage.setItem('bird_unlock_date', getFormattedDate(new Date()));
+                    addNotice('pet', 'birdhouse.png');
+                    setTimeout(() => {
+                        document.getElementById('unlock-bird-modal').style.display = 'flex';
+                    }, 1500);
+                }
+
                 updateGardenLandscape25D();
                 updatePlantLogic();
                 renderCalendar();
@@ -1665,6 +1703,65 @@
             return '🌰';
         }
 
+        // =========================================
+        // 🐦 青鳥偶爾飛出小屋：在大樹附近繞一圈，或從畫面右邊飛出去、再從左邊飛回小屋
+        // 白天才飛 (晚上在小屋休息)；看不到花園時不飛，省電
+        // =========================================
+        const BIRD_SPEED = 110; // 每秒飛幾像素
+        function scheduleBirdFlight(perchImg, token) {
+            clearTimeout(window.birdFlightTimer);
+            window.birdFlightTimer = setTimeout(() => startBirdFlight(perchImg, token), 25000 + Math.random() * 45000);
+        }
+        async function startBirdFlight(perchImg, token) {
+            if (token !== window.birdFlightToken || !perchImg.isConnected) return;
+            const hour = new Date().getHours();
+            if (isGardenPaused() || hour < 6 || hour >= 18) return scheduleBirdFlight(perchImg, token);
+
+            const wrapper = document.getElementById('garden-floor-wrapper');
+            const wr = wrapper.getBoundingClientRect();
+            const pr = perchImg.getBoundingClientRect();
+            const home = { x: pr.left - wr.left, y: pr.top - wr.top };
+            const bird = document.createElement('img');
+            bird.className = 'flying-bluebird';
+            bird.style.width = pr.width + 'px'; // 跟停在小屋上的青鳥一樣大
+            bird.src = 'bluebird_fly_up_right.png';
+            bird.style.transform = `translate(${home.x}px, ${home.y}px)`;
+            wrapper.appendChild(bird);
+            perchImg.style.visibility = 'hidden';
+
+            let pos = { ...home };
+            const flyTo = async (x, y) => {
+                const dx = x - pos.x, dy = y - pos.y;
+                bird.src = `bluebird_fly_${dy < 0 ? 'up' : 'down'}_${dx < 0 ? 'left' : 'right'}.png`;
+                await bird.animate([
+                    { transform: `translate(${pos.x}px, ${pos.y}px)` },
+                    { transform: `translate(${x}px, ${y}px)` }
+                ], { duration: Math.hypot(dx, dy) / BIRD_SPEED * 1000, easing: 'ease-in-out', fill: 'forwards' }).finished;
+                pos = { x, y };
+            };
+
+            try {
+                if (Math.random() < 0.4) {
+                    // ✈️ 從畫面右邊飛出去，再從左邊飛回來
+                    await flyTo(wr.width * 0.45, home.y - 30);
+                    await flyTo(wr.width + 40, home.y - 10);
+                    pos = { x: -40, y: home.y + 60 };
+                    await flyTo(home.x + 40, home.y + 45);
+                    await flyTo(home.x, home.y);
+                } else {
+                    // 🔄 在大樹附近繞一圈
+                    for (const [ox, oy] of [[70, -40], [140, 10], [110, 70], [30, 80], [-20, 30], [0, 0]]) {
+                        await flyTo(home.x + ox, home.y + oy);
+                    }
+                }
+            } catch (e) {}
+
+            bird.remove();
+            if (token !== window.birdFlightToken || !perchImg.isConnected) return; // 花園已經重畫過了
+            perchImg.style.visibility = '';
+            scheduleBirdFlight(perchImg, token);
+        }
+
         function updateGardenLandscape25D() {
             const now = new Date();
             const garden = computeGardenState();
@@ -1749,6 +1846,10 @@
             // 🌟 重畫前先停掉舊的小狗計時器，避免背景殘留
             if (window.dogWalkTimer) clearInterval(window.dogWalkTimer);
             if (window.gsWalkTimer) clearInterval(window.gsWalkTimer);
+            // 🐦 重畫時也收回正在飛的青鳥
+            clearTimeout(window.birdFlightTimer);
+            window.birdFlightToken = (window.birdFlightToken || 0) + 1;
+            document.querySelectorAll('.flying-bluebird').forEach(el => el.remove());
 
             // 🌳 大樹本體
             const bigTree = document.createElement('div');
@@ -2071,6 +2172,20 @@
                         gsDog.style.top = gsY + '%';
                         gsDog.style.zIndex = Math.floor(gsY * 100 + gsX);
                     }, 3750); // 🌟 走路節奏也快 1.2 倍 (4500 ÷ 1.2)
+                }
+
+                // =========================================
+                // 🐦 青鳥小屋 (60天解鎖)：掛在大樹樹冠約 2 點鐘方向，青鳥停在門口平台
+                // =========================================
+                const tree = floor.querySelector('.big-tree-25d');
+                if (tree && (isPreviewDog || consecutiveDays >= 60)) {
+                    const birdHouse = document.createElement('div');
+                    birdHouse.className = 'tree-birdhouse';
+                    birdHouse.innerHTML = `<img src="birdhouse.png" class="tree-birdhouse-img"><img src="bluebird_idle_left.png" class="tree-bluebird">`;
+                    // 點小屋打開圖鑑；不要算進「連點大樹 5 下重新整理」
+                    birdHouse.onclick = (e) => { e.stopPropagation(); openGalleryModal(); };
+                    tree.appendChild(birdHouse);
+                    scheduleBirdFlight(birdHouse.querySelector('.tree-bluebird'), window.birdFlightToken);
                 }
             }
 
@@ -2663,6 +2778,7 @@
         // 點一下消息就打開那朵花/那隻狗的介紹
         // =========================================
         const NOTICE_DAYS = 5;
+        const NOTICE_MAX = 3;
         const STEP_DETAIL_LIMIT = 5;
         function getNotices() {
             try { return JSON.parse(localStorage.getItem('notice_events') || '[]'); } catch (e) { return []; }
@@ -2703,7 +2819,8 @@
             const recent = getNotices()
                 .map(n => ({ ...n, ago: noticeDaysAgo(n.date) }))
                 .filter(n => n.ago >= 0 && n.ago < NOTICE_DAYS)
-                .sort((a, b) => a.ago - b.ago || b.ts - a.ts);
+                .sort((a, b) => a.ago - b.ago || b.ts - a.ts)
+                .slice(0, NOTICE_MAX); // 最多列 3 則，新的會把舊的擠下去
 
             const noticesHTML = recent.map(n => {
                 let title, sub, color, onclick;
@@ -2711,7 +2828,7 @@
                     const idx = PET_INFO.findIndex(p => p.img === n.file);
                     const pet = PET_INFO[idx];
                     if (!pet) return '';
-                    title = `${pet.name}搬進花園了！`;
+                    title = pet.img === 'birdhouse.png' ? `大樹上掛起了${pet.name}！` : `${pet.name}搬進花園了！`;
                     sub = `連續紀錄滿 ${pet.days} 天・點我看介紹`;
                     color = pet.days >= 30 ? 'var(--danger)' : 'var(--warning)';
                     onclick = `openPetInfo(${idx}, true)`;
@@ -2765,7 +2882,8 @@
 
             // 點寵物卡片會跳出介紹 (內容在 PET_INFO)
             petContainer.innerHTML = PET_INFO.map((p, i) => {
-                const unlocked = p.days === 7 ? showDog : showGs;
+                const showBird = isPreviewDog || localStorage.getItem('bird_unlocked_notified') === 'true';
+                const unlocked = p.days === 7 ? showDog : p.days === 30 ? showGs : showBird;
                 return `
                 <div class="gallery-item ${unlocked ? '' : 'locked'}" onclick="openPetInfo(${i}, ${unlocked})" style="cursor: pointer;">
                     <img src="${p.img}">
