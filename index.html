@@ -143,6 +143,20 @@
             opacity: 0;
         }
 
+        /* 下雨提醒：平常藏在畫面上方外面，.show 時滑下來 */
+        #rain-toast {
+            position: fixed; top: 0; left: 50%; z-index: 250;
+            transform: translate(-50%, -120%);
+            transition: transform 0.5s ease;
+            width: calc(100% - 32px); max-width: 420px; box-sizing: border-box;
+            margin-top: max(12px, env(safe-area-inset-top));
+            background: #ffffff; color: #2c3e50; border-left: 5px solid #5b8fd6;
+            border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+            padding: 14px 16px; font-size: 1.05rem; font-weight: bold; line-height: 1.5; text-align: center;
+            cursor: pointer;
+        }
+        #rain-toast.show { transform: translate(-50%, 0); }
+
         /* 下雨時天空變灰、太陽變淡 */
         body.raining #garden-sky.sky-day { background: linear-gradient(to bottom, #8fa3b5 0%, #c9d4dd 45%, #c9d4dd 100%); }
         body.raining .celestial-body { opacity: 0.3; }
@@ -774,6 +788,9 @@
         </div>
     </div>
 
+
+    <!-- 🌧️ 下雨提醒：從上方滑下來，10 秒後自動收起 (一個禮拜最多一次) -->
+    <div id="rain-toast" onclick="dismissRainToast()">🌧️ 下雨了，動物們都要跑進屋子躲雨囉！</div>
 
     <!-- 🔑 花園通行碼 (第一次打開或通行碼更換時才會出現，不能關掉) -->
     <div id="key-modal" class="modal" style="z-index: 200;">
@@ -1833,7 +1850,7 @@
         // 🌧️🌙 下雨，或晚上 11 點到早上 6 點：小狗和小鳥都躲回屋子裡 (看不到)
         function shouldShelter() {
             const h = new Date().getHours();
-            return document.body.classList.contains('raining') || h >= 23 || h < 6;
+            return document.body.classList.contains('rain-shelter') || h >= 23 || h < 6;
         }
         // 停在小屋上的鳥：要躲就藏起來，可以出來就出現 (正在飛的鳥由飛行程式自己處理)
         function applyBirdShelter() {
@@ -2967,7 +2984,7 @@
         async function checkRealtimeWeather() {
             lastWeatherCheck = Date.now();
             const force = new URLSearchParams(location.search).get('rain');
-            if (force === '1' || force === '0') return setRain(force === '1');
+            if (force === '1' || force === '0') return setRain(force === '1', true); // 測試模式：每次都跳提醒
             if (!getGardenKey()) return;
             try {
                 const response = await fetch(WEATHER_URL + '?t=' + Date.now(), { headers: gardenHeaders(false) });
@@ -2981,11 +2998,33 @@
         }
 
         // 下雨：天空變灰、太陽變淡、畫面下起雨；停雨就把雨滴收掉
-        function setRain(isRaining) {
+        // 剛發現下雨時，一個禮拜最多跳一次上方提醒 (10 秒)，提醒消失後動物們才跑回屋子
+        const RAIN_TOAST_KEY = 'rain_toast_last';
+        const RAIN_TOAST_GAP = 7 * 24 * 60 * 60 * 1000; // 一個禮拜
+        function setRain(isRaining, forced) {
+            const wasRaining = document.body.classList.contains('raining');
             document.body.classList.toggle('raining', isRaining);
-            applyBirdShelter(); // 停在小屋上的鳥馬上躲進去 / 出來；小狗下一步就會走回家
             let layer = document.getElementById('weather-layer');
-            if (!isRaining) { if (layer) layer.remove(); return; }
+            if (!isRaining) {
+                if (layer) layer.remove();
+                clearTimeout(window.rainShelterTimer);
+                hideRainToast();
+                setRainShelter(false); // 雨停了，動物們出來
+                return;
+            }
+            if (!wasRaining) {
+                let last = 0;
+                try { last = parseInt(localStorage.getItem(RAIN_TOAST_KEY) || '0', 10); } catch (e) {}
+                if (forced || Date.now() - last > RAIN_TOAST_GAP) {
+                    // 先跳提醒，動物們還在外面；10 秒後提醒收起來，動物們才跑回家
+                    if (!forced) { try { localStorage.setItem(RAIN_TOAST_KEY, String(Date.now())); } catch (e) {} }
+                    showRainToast();
+                    clearTimeout(window.rainShelterTimer);
+                    window.rainShelterTimer = setTimeout(() => { hideRainToast(); setRainShelter(true); }, 10000);
+                } else {
+                    setRainShelter(true); // 這禮拜提醒過了：動物們直接躲雨
+                }
+            }
             if (layer) return; // 已經在下了
             layer = document.createElement('div');
             layer.id = 'weather-layer';
@@ -2999,6 +3038,27 @@
                 layer.appendChild(drop);
             }
             document.getElementById('garden-world').appendChild(layer);
+        }
+
+        // 動物們躲雨 (跟「有沒有在下雨」分開，才能等提醒結束再跑回家)
+        function setRainShelter(on) {
+            document.body.classList.toggle('rain-shelter', on);
+            applyBirdShelter(); // 停在小屋上的鳥馬上躲進去 / 出來；小狗下一步就會走回家
+        }
+
+        // 🌧️ 上方往下滑的下雨提醒 (點一下也可以提早收起來)
+        function showRainToast() {
+            const t = document.getElementById('rain-toast');
+            t.classList.add('show');
+        }
+        function hideRainToast() {
+            document.getElementById('rain-toast').classList.remove('show');
+        }
+        function dismissRainToast() {
+            if (!document.getElementById('rain-toast').classList.contains('show')) return;
+            clearTimeout(window.rainShelterTimer);
+            hideRainToast();
+            if (document.body.classList.contains('raining')) setRainShelter(true);
         }
 
         // =========================================
