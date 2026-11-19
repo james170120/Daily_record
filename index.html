@@ -147,8 +147,8 @@
         #celestial-hit { position: absolute; top: 3%; left: 5%; width: 5.5rem; height: 5.5rem; z-index: 11; cursor: pointer; -webkit-tap-highlight-color: transparent; }
         #rain-toast, #garden-toast {
             position: fixed; top: 0; left: 50%; z-index: 250;
-            transform: translate(-50%, -120%);
-            transition: transform 0.5s ease;
+            transform: translate(-50%, -300%); opacity: 0; pointer-events: none; /* 收起來時完全藏起來 (iPhone 瀏海下方也不會露出一條邊) */
+            transition: transform 0.5s ease, opacity 0.5s ease;
             width: calc(100% - 32px); max-width: 420px; box-sizing: border-box;
             margin-top: max(12px, env(safe-area-inset-top));
             background: #ffffff; color: #2c3e50; border-left: 5px solid #5b8fd6;
@@ -156,7 +156,7 @@
             padding: 14px 16px; font-size: 1.05rem; font-weight: bold; line-height: 1.5; text-align: center;
             cursor: pointer;
         }
-        #rain-toast.show, #garden-toast.show { transform: translate(-50%, 0); }
+        #rain-toast.show, #garden-toast.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
         #garden-toast { border-left-color: var(--primary); }
 
         /* 下雨時天空變灰、太陽變淡 */
@@ -583,7 +583,7 @@
     <div id="garden-world">
         <div id="garden-sky"></div>
         <!-- ☀️🌙 太陽 / 月亮的點擊範圍 (花園地板蓋在天空上面，所以另外放一塊透明的按鈕) -->
-        <div id="celestial-hit" onclick="toggleGardenLayout()" aria-label="切換花園排列"></div>
+        <div id="celestial-hit" onclick="tapCelestial()" aria-label="切換花園排列"></div>
         <div id="garden-floor"></div>
     </div>
 
@@ -1528,7 +1528,7 @@
                     window.layoutHintTimer = setTimeout(() => {
                         if (document.getElementById('rain-toast').classList.contains('show')) { window.layoutHintTimer = null; return; } // 下雨提醒中，下次再說
                         localStorage.setItem('layout_hint_shown', '1');
-                        showTopToast('💡 點一下天上的太陽（晚上是月亮），可以切換花園的排列方式喔！', 8000);
+                        showTopToast('💡 連點兩下天上的太陽（晚上是月亮），可以切換花園的排列方式喔！', 8000);
                     }, 6000);
                 }
             } catch (error) { sendErrorLog(`讀取失敗: ${error.message}`); }
@@ -2000,7 +2000,7 @@
         // 花園地板斜 45 度又往後倒 (有透視)，所以先量地板上 4 個點在畫面上的位置，
         // 算出換算公式 (平面透視轉換)，之後每個位置都能換算成畫面上的座標
         // =========================================
-        const GARDEN_CENTER = { x: 45, y: 45 }; // 生長區中心 (地板座標 %)
+        const GARDEN_CENTER = { x: 57.5, y: 57.5 }; // 生長區中心 (地板座標 %)：柴犬狗屋左上方那一格的中心
         function solveHomography(src, dst) {
             // 解 8 個未知數：x' = (a x + b y + c) / (g x + h y + 1)、y' = (d x + e y + f) / (g x + h y + 1)
             const A = [], B = [];
@@ -2042,12 +2042,12 @@
         // 每個位置在畫面上「離生長區中心多遠 (dist)」和「在哪個方向 (ang，0 = 正上方，順時針)」；量不到時用近似公式
         function makeSpotScreen(floor) {
             const proj = measureFloorProjection(floor);
-            let toScreen, side = 2.2;
+            let toScreen, side = 9999;
             if (proj) {
                 const c = proj(GARDEN_CENTER.x, GARDEN_CENTER.y);
                 toScreen = (x, y) => { const p = proj(x, y); return { sx: p.sx - c.sx, sy: p.sy - c.sy }; };
-                // 手機是直的：左右的距離放大來算，花園會長成「配合手機形狀的橢圓」，左右先碰到邊時，往下還有空間繼續長
-                side = Math.min(3, Math.max(1, (window.innerHeight - c.sy) / (window.innerWidth / 2)));
+                // 先長成圓形；左右快碰到手機邊緣後，超出的部分加重計算，花園就改成往下長 (手機是直的，下面空間比較多)
+                side = window.innerWidth / 2 * 0.9;
             } else {
                 toScreen = (x, y) => {
                     const dx = x - GARDEN_CENTER.x, dy = y - GARDEN_CENTER.y;
@@ -2057,13 +2057,20 @@
             return s => {
                 const p = toScreen(s.left, s.top);
                 return {
-                    dist: (p.sx * side) ** 2 + p.sy ** 2,
+                    dist: (Math.abs(p.sx) + Math.max(0, Math.abs(p.sx) - side) * 3) ** 2 + p.sy ** 2,
                     ang: (Math.atan2(p.sx, -p.sy) * 180 / Math.PI + 360) % 360
                 };
             };
         }
 
-        // ☀️🌙 點太陽 / 月亮：彩虹排列 ↔ 自然隨機
+        // ☀️🌙 連點兩下太陽 / 月亮 (1.5 秒內)：彩虹排列 ↔ 自然隨機 (點一下不會變，避免不小心碰到)
+        let celestialTaps = 0, celestialTapTimer = null;
+        function tapCelestial() {
+            celestialTaps++;
+            clearTimeout(celestialTapTimer);
+            if (celestialTaps >= 2) { celestialTaps = 0; toggleGardenLayout(); return; }
+            celestialTapTimer = setTimeout(() => { celestialTaps = 0; }, 1500);
+        }
         function toggleGardenLayout() {
             const next = getGardenLayout() === 'rainbow' ? 'random' : 'rainbow';
             try { localStorage.setItem('garden_layout', next); localStorage.setItem('layout_hint_shown', '1'); } catch (e) {}
@@ -2093,15 +2100,13 @@
             // =========================================
 
             const collectedPlants = garden.gardenFlowers;
-            const displayGrowings = garden.growing.slice(-16);
-
-            // 🌟 1. 生長區往上移動一格 (中心點從 9,10 改為 8,9) 🌟
-            const farmTiles = [ {x:8, y:8}, {x:9, y:8}, {x:8, y:9}, {x:9, y:9} ];
-
-            // 嚴格限制在 5% 網格內的 4 個角落 (留白防壓線，絕對不出格)
+            // 🌱 生長區只有一塊土 (在柴犬狗屋的左上方一格)，最多同時顯示 6 株：
+            //    依種下的順序，最早的 6 株先顯示，之後的種子要等前面的移到花園後才輪到 (生長區動態頁照舊顯示全部)
+            const displayGrowings = garden.growing.slice(0, 6);
+            const farmTiles = [ {x:11, y:11} ];
             const growOffsets = [
-                {dx: 1.2, dy: 1.2}, {dx: 3.8, dy: 1.2},
-                {dx: 1.2, dy: 3.8}, {dx: 3.8, dy: 3.8}
+                {dx: 1.0, dy: 1.4}, {dx: 2.5, dy: 1.4}, {dx: 4.0, dy: 1.4},
+                {dx: 1.0, dy: 3.6}, {dx: 2.5, dy: 3.6}, {dx: 4.0, dy: 3.6}
             ];
 
             // 1. 渲染天空與月相
@@ -2197,20 +2202,31 @@
             const occupiedPoints = [];
             occupiedPoints.push({x: 17, y: 30});
 
-            const flowerOffsets = growOffsets;
+            // 🌸 花的位置：每塊地 5 個 (像骰子的 5 點：四個角 + 正中間)，比原本的 4 個緊密一點、空出更多草原
+            //    之後花更多時，可以再加密成 6 個或 9 個
+            const flowerOffsets = [
+                {dx: 1.2, dy: 1.2}, {dx: 3.8, dy: 1.2},
+                {dx: 2.5, dy: 2.5},
+                {dx: 1.2, dy: 3.8}, {dx: 3.8, dy: 3.8}
+            ];
+            // 🌿 小草的位置維持每塊地 4 個 (不用變多，手機比較省電)
+            const grassOffsets = [ {dx: 1.2, dy: 1.2}, {dx: 3.8, dy: 1.2}, {dx: 1.2, dy: 3.8}, {dx: 3.8, dy: 3.8} ];
             let availableFlowerSpots = [];
             let treeGrassSpots = [];
+            let grassSpots = [];
+            const TREE_NO_FLOWER = 4.5; // 大樹樹幹附近不種花的半徑 (原本 7.5，樹右邊那塊空地太大)
 
             // 🌟 用固定種子產生位置，花草每次開啟都在同樣的地方 🌟
             const layoutRand = seededRandom(20260101);
 
-            // 🌟 多加一圈花圈 (改為 12 圈)，確保往下移的草原下方也能填滿 🌟
-            for (let r = 1; r <= 12; r++) {
+            // 🌟 從原本的花園中心往外 12 圈 (r = 0 是中間 2x2 的 4 塊地)；生長區那一格不種東西 🌟
+            for (let r = 0; r <= 12; r++) {
                 let ringTiles = [];
                 let min = 8 - r;
                 let max = 9 + r;
                 for (let rx = min; rx <= max; rx++) {
                     for (let ry = min; ry <= max; ry++) {
+                        if (rx === farmTiles[0].x && ry === farmTiles[0].y) continue; // 生長區
                         if (rx === min || rx === max || ry === min || ry === max) {
                             ringTiles.push({x: rx, y: ry});
                         }
@@ -2218,33 +2234,30 @@
                 }
                 shuffleWith(ringTiles, layoutRand);
 
-                let ringSpots = [];
                 ringTiles.forEach(t => {
+                    const tileKey = t.x + ',' + t.y;
+                    // 花的位置
                     flowerOffsets.forEach(off => {
-                        let spotX = t.x * 5 + off.dx + (layoutRand() * 0.4 - 0.2);
-                        let spotY = t.y * 5 + off.dy + (layoutRand() * 0.4 - 0.2);
-                        // 小草的長相也先決定好，同一個位置永遠長一樣的草
+                        const spotX = t.x * 5 + off.dx + (layoutRand() * 0.3 - 0.15);
+                        const spotY = t.y * 5 + off.dy + (layoutRand() * 0.3 - 0.15);
+                        if (Math.hypot(spotX - 17, spotY - 30) < TREE_NO_FLOWER) return; // 樹幹旁不種花
+                        availableFlowerSpots.push({ left: spotX, top: spotY, tile: tileKey });
+                    });
+                    // 小草的位置 (長相先決定好，同一個位置永遠長一樣的草)
+                    grassOffsets.forEach(off => {
                         const spot = {
-                            left: spotX, top: spotY,
+                            left: t.x * 5 + off.dx + (layoutRand() * 0.4 - 0.2),
+                            top: t.y * 5 + off.dy + (layoutRand() * 0.4 - 0.2),
+                            tile: tileKey,
                             grassRoll: layoutRand(),
                             grassDx: layoutRand() * 1.5 - 0.75,
                             grassDy: layoutRand() * 1.5 - 0.75,
                             grassSize: 0.7 + layoutRand() * 0.5
                         };
-
-                        let distToTree = Math.sqrt(Math.pow(spotX - 17, 2) + Math.pow(spotY - 30, 2));
-
-                        // 大樹防護區，不種花，留給小草
-                        if (distToTree < 7.5) {
-                            treeGrassSpots.push(spot);
-                            return;
-                        }
-
-                        ringSpots.push(spot);
+                        if (Math.hypot(spot.left - 17, spot.top - 30) < 7.5) treeGrassSpots.push(spot); // 樹下的草一定長
+                        else grassSpots.push(spot);
                     });
                 });
-                shuffleWith(ringSpots, layoutRand);
-                availableFlowerSpots.push(...ringSpots);
             }
 
             // 🌸 花從生長區往外「畫圓」長：依照在手機畫面上離生長區多遠排順序 (近的先種)
@@ -2288,7 +2301,7 @@
                 fragment.appendChild(pastPlant);
             });
 
-            // 先把 4 塊深色泥土底板畫好
+            // 先把生長區的深色泥土底板畫好
             farmTiles.forEach(t => {
                 const soil = document.createElement('div');
                 soil.className = 'farm-plot';
@@ -2300,11 +2313,8 @@
 
             // 將生長區的植物種進農田
             displayGrowings.forEach((rec, index) => {
-                const tileIndex = index % 4;
-                const offsetIndex = Math.floor(index / 4);
-
-                const t = farmTiles[tileIndex];
-                const off = growOffsets[offsetIndex];
+                const t = farmTiles[0];
+                const off = growOffsets[index];
 
                 const plantX = t.x * 5 + off.dx;
                 const plantY = t.y * 5 + off.dy;
@@ -2332,7 +2342,9 @@
             // 🌟 4. 全新網格化小草：結合剩餘空位與樹下空位 🌟
             // 🌟 省電關鍵：小草改為靜止不搖動 (原本上千個同時在動，是手機發燙的主因) 🌟
             // =========================================
-            const allGrassSpots = availableFlowerSpots.filter((_, i) => !usedSpotIndexes.has(i)).concat(treeGrassSpots);
+            // 有種花的那塊地就不長草，其餘的地長草
+            const flowerTiles = new Set([...usedSpotIndexes].map(i => availableFlowerSpots[i].tile));
+            const allGrassSpots = grassSpots.filter(s => !flowerTiles.has(s.tile)).concat(treeGrassSpots);
 
             allGrassSpots.forEach(spot => {
                 // 限制天際線：X+Y 小於 36 不種小草 (解決飛天草問題)
