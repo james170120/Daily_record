@@ -143,6 +143,10 @@
             opacity: 0;
         }
 
+        /* 下雨時天空變灰、太陽變淡 */
+        body.raining #garden-sky.sky-day { background: linear-gradient(to bottom, #8fa3b5 0%, #c9d4dd 45%, #c9d4dd 100%); }
+        body.raining .celestial-body { opacity: 0.3; }
+
         @keyframes rainFall {
             0% { transform: translateY(-50px) rotate(15deg); opacity: 0; }
             10% { opacity: 1; }
@@ -1362,6 +1366,7 @@
                 input.value = '';
                 closeModal('key-modal');
                 loadData();
+                checkRealtimeWeather();
             } catch (e) {
                 showKeyModal('網路好像不太穩，請稍後再試一次');
             }
@@ -1488,6 +1493,8 @@
             refreshPauseState();
             // 回到 App 且距離上次讀取超過 5 分鐘，就重新讀取，讓種子成長與日夜切換保持最新
             if (!document.hidden && Date.now() - lastLoadTime > 5 * 60 * 1000 && !stepSync) loadData();
+            // 🌧️ 回到花園時，距離上次查天氣超過 30 分鐘就再查一次
+            if (!document.hidden && Date.now() - lastWeatherCheck > 30 * 60 * 1000) checkRealtimeWeather();
         });
 
         // =========================================
@@ -1823,6 +1830,20 @@
         // 最高只飛到太陽底部；早上 6 點到晚上 8 點才飛 (晚上 8 點後在小屋休息)；看不到花園時不飛，省電
         // 打開花園時馬上飛第一次，之後每 20~45 秒飛一次
         // =========================================
+        // 🌧️🌙 下雨，或晚上 11 點到早上 6 點：小狗和小鳥都躲回屋子裡 (看不到)
+        function shouldShelter() {
+            const h = new Date().getHours();
+            return document.body.classList.contains('raining') || h >= 23 || h < 6;
+        }
+        // 停在小屋上的鳥：要躲就藏起來，可以出來就出現 (正在飛的鳥由飛行程式自己處理)
+        function applyBirdShelter() {
+            document.querySelectorAll('.tree-bluebird, .tree-greenbird').forEach(p => {
+                if (!p.dataset.flying) p.style.visibility = shouldShelter() ? 'hidden' : '';
+            });
+        }
+        // 每分鐘檢查一次，晚上 11 點一到小鳥就回屋睡覺、早上 6 點出來 (只是改顯示，很省電)
+        if (!window.shelterTimer) window.shelterTimer = setInterval(applyBirdShelter, 60 * 1000);
+
         function scheduleBirdFlight(perchImg, token, delay) {
             window.birdFlightTimers = window.birdFlightTimers || {};
             window.birdFirstFlight = window.birdFirstFlight || {};
@@ -1875,6 +1896,7 @@
             const hour = new Date().getHours();
             if (hour < 6 || hour >= 20) return scheduleBirdFlight(perchImg, token, 10 * 60 * 1000); // 晚上 8 點到早上 6 點在小屋休息，10 分鐘後再看看
             if (isGardenPaused()) return scheduleBirdFlight(perchImg, token, 5000); // 花園被蓋住時，回到花園 5 秒內就飛
+            if (shouldShelter()) return scheduleBirdFlight(perchImg, token, 5 * 60 * 1000); // 下雨天躲在小屋裡
 
             const pr = perchImg.getBoundingClientRect();
             if (!pr.width) return scheduleBirdFlight(perchImg, token, 5000); // 還沒排版好
@@ -1887,25 +1909,32 @@
             bird.style.transform = `translate(${home.x}px, ${home.y}px)`;
             document.body.appendChild(bird); // 放在花園外層，飛到天空才不會被花園的淡出遮罩蓋掉
             perchImg.style.visibility = 'hidden';
+            perchImg.dataset.flying = '1';
 
             const { legs, speed } = planBirdRoute(home);
             let pos = { ...home };
+            const flyTo = async (x, y) => {
+                const dx = x - pos.x, dy = y - pos.y;
+                bird.src = `${sprite}_fly_${dy < 0 ? 'up' : 'down'}_${dx < 0 ? 'left' : 'right'}.png`;
+                await bird.animate([
+                    { transform: `translate(${pos.x}px, ${pos.y}px)` },
+                    { transform: `translate(${x}px, ${y}px)` }
+                ], { duration: Math.hypot(dx, dy) / speed * 1000, easing: 'ease-in-out', fill: 'forwards' }).finished;
+                pos = { x, y };
+            };
             try {
                 for (const [x, y, jump] of legs) {
+                    // 🌧️ 飛到一半下雨了：直接飛回小屋躲雨
+                    if (shouldShelter()) { await flyTo(home.x, home.y); break; }
                     if (jump) { pos = { x, y }; continue; }
-                    const dx = x - pos.x, dy = y - pos.y;
-                    bird.src = `${sprite}_fly_${dy < 0 ? 'up' : 'down'}_${dx < 0 ? 'left' : 'right'}.png`;
-                    await bird.animate([
-                        { transform: `translate(${pos.x}px, ${pos.y}px)` },
-                        { transform: `translate(${x}px, ${y}px)` }
-                    ], { duration: Math.hypot(dx, dy) / speed * 1000, easing: 'ease-in-out', fill: 'forwards' }).finished;
-                    pos = { x, y };
+                    await flyTo(x, y);
                 }
             } catch (e) {}
 
             bird.remove();
+            delete perchImg.dataset.flying;
             if (token !== window.birdFlightToken || !perchImg.isConnected) return; // 花園已經重畫過了
-            perchImg.style.visibility = '';
+            perchImg.style.visibility = shouldShelter() ? 'hidden' : ''; // 下雨 / 半夜就待在屋裡
             scheduleBirdFlight(perchImg, token);
         }
 
@@ -2212,8 +2241,23 @@
                 floor.appendChild(dog);
 
                 // 3. 啟動狗狗的漫步 AI (2.5D 十字走位法)
+                if (shouldShelter()) { dog.dataset.home = '1'; dog.style.visibility = 'hidden'; } // 一打開就在下雨 / 半夜：已經在屋裡
                 window.dogWalkTimer = setInterval(() => {
                     if (isGardenPaused()) return; // 🌟 看不到花園時，小狗也休息
+
+                    // 🌧️🌙 下雨或半夜：走回狗屋門口，然後進屋 (消失)；可以出門時從門口出來
+                    if (shouldShelter()) {
+                        if (!dog.dataset.home) {
+                            dog.dataset.home = '1';
+                            dogImg.src = 'dog_up.png';
+                            dogX = houseX + 3; dogY = houseY + 3;
+                            dog.style.left = dogX + '%'; dog.style.top = dogY + '%';
+                            dog.style.zIndex = Math.floor(dogY * 100 + dogX);
+                            setTimeout(() => { if (dog.dataset.home) dog.style.visibility = 'hidden'; }, 3000);
+                        }
+                        return;
+                    }
+                    if (dog.dataset.home) { delete dog.dataset.home; dog.style.visibility = ''; return; } // 先在門口露臉，下一輪再出去玩
 
                     let targetX = dogX;
                     let targetY = dogY;
@@ -2293,8 +2337,23 @@
                         return inScreen && !behindSign;
                     };
 
+                    if (shouldShelter()) { gsDog.dataset.home = '1'; gsDog.style.visibility = 'hidden'; }
                     window.gsWalkTimer = setInterval(() => {
                         if (isGardenPaused()) return;
+
+                        // 🌧️🌙 下雨或半夜：走回犬舍門口，然後進屋 (消失)
+                        if (shouldShelter()) {
+                            if (!gsDog.dataset.home) {
+                                gsDog.dataset.home = '1';
+                                gsImg.src = 'german_shepherd_top_right.png';
+                                gsX = gsHouseX + 3; gsY = gsHouseY + 3;
+                                gsDog.style.left = gsX + '%'; gsDog.style.top = gsY + '%';
+                                gsDog.style.zIndex = Math.floor(gsY * 100 + gsX);
+                                setTimeout(() => { if (gsDog.dataset.home) gsDog.style.visibility = 'hidden'; }, 2500);
+                            }
+                            return;
+                        }
+                        if (gsDog.dataset.home) { delete gsDog.dataset.home; gsDog.style.visibility = ''; return; }
 
                         let targetX = gsX;
                         let targetY = gsY;
@@ -2348,6 +2407,7 @@
                 greenTree.appendChild(greenHouse);
                 scheduleBirdFlight(greenHouse.querySelector('.tree-greenbird'), window.birdFlightToken);
             }
+            applyBirdShelter(); // 下雨 / 半夜打開花園時，鳥已經在屋裡
 
             // =========================================
             // 🌟 5. 獎勵機制與介面更新：保底生態 + 動態蝴蝶與蜜蜂 🌟
@@ -2897,31 +2957,48 @@
         }
 
         // =========================================
-        // 氣象署 CWA 即時天氣 (透過 n8n 安全中繼站)
-        // ⚠️ 目前 HTML 裡還沒有 #weather-layer / #sun-icon，也還沒寫產生雨滴的程式，
-        //    所以下方啟動處先不呼叫。之後做完雨天特效再打開即可。
+        // 🌧️ 仁武區即時天氣 (透過 n8n 問氣象署雨量站：最近 10 分鐘有雨量就算在下雨)
+        // 打開花園時查一次，之後回到花園時最多每 30 分鐘再查一次
+        // 測試用：網址後面加 ?rain=1 強制下雨、?rain=0 強制晴天
         // =========================================
+        const WEATHER_URL = 'https://orthodox-oarfish.pikapod.net/webhook/ffaf46df-c23c-4613-8c5b-5095c84da6ea';
+        let lastWeatherCheck = 0;
+
         async function checkRealtimeWeather() {
-            const weatherLayer = document.getElementById('weather-layer');
-            const sunIcon = document.getElementById('sun-icon');
-            if (!weatherLayer || !sunIcon) return;
+            lastWeatherCheck = Date.now();
+            const force = new URLSearchParams(location.search).get('rain');
+            if (force === '1' || force === '0') return setRain(force === '1');
+            if (!getGardenKey()) return;
             try {
-                const n8nWeatherUrl = 'https://orthodox-oarfish.pikapod.net/webhook/ffaf46df-c23c-4613-8c5b-5095c84da6ea';
-
-                // 🌟 天氣 GET 請求帶上通行碼 🌟
-                const response = await fetch(n8nWeatherUrl, {
-                    headers: gardenHeaders(false)
-                });
+                const response = await fetch(WEATHER_URL + '?t=' + Date.now(), { headers: gardenHeaders(false) });
+                if (!response.ok) throw new Error('天氣回應異常 ' + response.status);
                 const data = await response.json();
-
-                weatherLayer.style.display = data.isRaining ? 'block' : 'none';
-                sunIcon.style.display = data.isRaining ? 'none' : 'block';
-                console.log(data.isRaining ? "🌧️ 目前仁武區天氣:" : "☀️ 目前仁武區天氣:", data.weather_desc);
+                setRain(data.isRaining === true);
+                console.log(data.isRaining ? '🌧️ 仁武區正在下雨：' : '☀️ 仁武區沒有下雨：', data.weather_desc);
             } catch (error) {
-                console.error("無法取得天氣資料，維持預設晴天", error);
-                weatherLayer.style.display = 'none';
-                sunIcon.style.display = 'block';
+                console.warn('無法取得天氣資料，維持原本的天氣', error);
             }
+        }
+
+        // 下雨：天空變灰、太陽變淡、畫面下起雨；停雨就把雨滴收掉
+        function setRain(isRaining) {
+            document.body.classList.toggle('raining', isRaining);
+            applyBirdShelter(); // 停在小屋上的鳥馬上躲進去 / 出來；小狗下一步就會走回家
+            let layer = document.getElementById('weather-layer');
+            if (!isRaining) { if (layer) layer.remove(); return; }
+            if (layer) return; // 已經在下了
+            layer = document.createElement('div');
+            layer.id = 'weather-layer';
+            for (let i = 0; i < 120; i++) {
+                const drop = document.createElement('div');
+                drop.className = 'raindrop';
+                drop.style.left = (-20 + Math.random() * 170) + '%'; // 雨是斜的，起點要拉寬才不會右邊沒雨
+                drop.style.top = (Math.random() * -50) + 'px';
+                drop.style.animationDuration = (1.5 + Math.random() * 2.0) + 's';
+                drop.style.animationDelay = (Math.random() * 2) + 's';
+                layer.appendChild(drop);
+            }
+            document.getElementById('garden-world').appendChild(layer);
         }
 
         // =========================================
@@ -3187,7 +3264,7 @@
         }
 
         initDynamicCalendarBtn();
-        // checkRealtimeWeather(); // ⚠️ 雨天特效完成前先關閉，省一次網路請求
+        checkRealtimeWeather(); // 🌧️ 仁武區在下雨的話，花園也會下雨
         loadData();
 
     </script>
