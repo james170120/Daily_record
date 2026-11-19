@@ -246,7 +246,7 @@
         /* 左側大樹固定位 */
         /* 🐦 青鳥小屋掛在大樹上 (2 點鐘方向)；青鳥大小約蝴蝶的 1.5 倍 */
         .tree-birdhouse { position: absolute; left: 46%; top: 20%; margin-top: 12px; width: 24%; line-height: 0; cursor: pointer; }
-        .flying-bluebird { position: absolute; left: 0; top: 0; z-index: 60; image-rendering: pixelated; pointer-events: none; will-change: transform; }
+        .flying-bluebird { position: fixed; left: 0; top: 0; z-index: 15; image-rendering: pixelated; pointer-events: none; will-change: transform; }
         .tree-birdhouse-img { display: block; width: 100%; image-rendering: pixelated; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.3)); }
         /* 青鳥身體正對小屋圓洞 (洞中心在圖片 x 45%、y 52%) */
         .tree-bluebird { position: absolute; width: 1.5rem; left: calc(45% - 0.75rem); top: calc(52% - 0.75rem); image-rendering: pixelated; pointer-events: none; }
@@ -526,6 +526,8 @@
         .flower-info-img { width: 7rem; height: 7rem; object-fit: contain; margin: 0 auto; image-rendering: pixelated; }
         .flower-info-img.locked { filter: brightness(0) opacity(0.2); }
         .flower-info-lang { display: inline-block; align-self: center; background: rgba(0, 188, 212, 0.12); color: var(--accent); font-weight: bold; font-size: 0.9rem; padding: 4px 12px; border-radius: 12px; }
+        .pair-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); display: inline-block; }
+        .pair-dot.active { background: var(--primary); }
         .flower-info-tip { background: #fff8e1; border-left: 4px solid var(--warning); border-radius: 8px; padding: 10px 12px; text-align: left; font-size: 0.95rem; line-height: 1.6; color: var(--text-color); }
 
         /* 🌟 寵物橫向滑動容器專屬樣式 🌟 */
@@ -910,13 +912,18 @@
     </div>
 
     <!-- 🌸 花朵介紹小視窗 (點圖鑑裡的花打開，疊在圖鑑上面) -->
-    <div id="flower-info-modal" class="modal" style="z-index: 110;">
-        <div class="modal-content" style="text-align: center; padding: 25px 20px;">
+    <div id="flower-info-modal" class="modal" style="z-index: 110;" onclick="if (event.target === this) closeModal('flower-info-modal')">
+        <div class="modal-content" style="text-align: center; padding: 25px 20px;" onclick="togglePetPair(event)">
+            <!-- 屋子 ↔ 住在裡面的動物：兩頁的小圓點 (只有從花園點屋子時才出現) -->
+            <div id="pet-pair-dots" style="display: none; justify-content: center; gap: 8px; margin-bottom: 6px;">
+                <span class="pair-dot"></span><span class="pair-dot"></span>
+            </div>
             <img id="flower-info-img" class="flower-info-img" src="" alt="">
             <h2 id="flower-info-name" style="color: var(--accent); margin: 8px 0;"></h2>
             <span id="flower-info-lang" class="flower-info-lang"></span>
             <p id="flower-info-desc" style="color: var(--text-color); font-size: 1.05rem; line-height: 1.7; text-align: left; margin: 15px 0 10px; white-space: pre-line;"></p>
             <div id="flower-info-tip" class="flower-info-tip"></div>
+            <div id="pet-pair-hint" style="display: none; margin-top: 12px; color: var(--primary); font-weight: bold; font-size: 1rem;"></div>
             <button class="wood-btn" onclick="closeModal('flower-info-modal')" style="margin-top: 15px;">關閉</button>
         </div>
     </div>
@@ -1812,59 +1819,87 @@
         }
 
         // =========================================
-        // 🐦 青鳥偶爾飛出小屋：在大樹附近繞一圈，或從畫面右邊飛出去、再從左邊飛回小屋
-        // 白天才飛 (晚上在小屋休息)；看不到花園時不飛，省電
+        // 🐦 鳥兒飛出小屋：每次在天空和花園上方飛 10~20 秒再回家，偶爾從畫面右邊飛出去、左邊飛回來
+        // 最高只飛到太陽底部；早上 6 點到晚上 8 點才飛 (晚上 8 點後在小屋休息)；看不到花園時不飛，省電
+        // 打開花園時馬上飛第一次，之後每 20~45 秒飛一次
         // =========================================
-        const BIRD_SPEED = 110; // 每秒飛幾像素
-        // 每隻鳥各自一個計時器 (perchImg.dataset.sprite = 'bluebird' / 'greenbird')
-        function scheduleBirdFlight(perchImg, token) {
+        function scheduleBirdFlight(perchImg, token, delay) {
             window.birdFlightTimers = window.birdFlightTimers || {};
+            window.birdFirstFlight = window.birdFirstFlight || {};
             const id = perchImg.dataset.sprite;
             clearTimeout(window.birdFlightTimers[id]);
-            window.birdFlightTimers[id] = setTimeout(() => startBirdFlight(perchImg, token), 25000 + Math.random() * 45000);
+            if (delay == null) {
+                if (!window.birdFirstFlight[id]) { window.birdFirstFlight[id] = true; delay = 800; } // 這次打開 App 的第一次：馬上飛
+                else delay = 20000 + Math.random() * 25000;
+            }
+            window.birdFlightTimers[id] = setTimeout(() => startBirdFlight(perchImg, token), delay);
         }
+
+        // 規劃一條 10~20 秒的飛行路線 (座標都是畫面上的位置)
+        function planBirdRoute(home) {
+            const W = window.innerWidth, H = window.innerHeight;
+            const sun = document.querySelector('.celestial-body');
+            const top = sun ? sun.getBoundingClientRect().bottom : H * 0.12;   // 最高到太陽底部
+            const bottom = Math.max(top + 120, Math.min(H * 0.55, home.y + 160)); // 最低到花園上半部
+            const rand = (a, b) => a + Math.random() * (b - a);
+            const duration = rand(10000, 20000);
+            const targetLen = duration / 1000 * 95; // 平均每秒飛 95 像素左右
+            const legs = []; // [x, y, jump] jump = 從畫面左邊外面重新飛進來
+            let p = { ...home }, len = 0;
+            const exitRight = Math.random() < 0.35;
+            while (len < targetLen * (exitRight ? 0.55 : 0.85)) {
+                const q = { x: rand(10, W - 40), y: rand(top, bottom) };
+                len += Math.hypot(q.x - p.x, q.y - p.y);
+                legs.push([q.x, q.y, false]);
+                p = q;
+            }
+            if (exitRight) {
+                // ✈️ 從右邊飛出去，再從左邊飛進來
+                const yOut = rand(top, bottom);
+                len += Math.hypot(W + 40 - p.x, yOut - p.y);
+                legs.push([W + 40, yOut, false]);
+                p = { x: -40, y: rand(top, bottom) };
+                legs.push([p.x, p.y, true]);
+                const q = { x: rand(40, W * 0.5), y: rand(top, bottom) };
+                len += Math.hypot(q.x - p.x, q.y - p.y);
+                legs.push([q.x, q.y, false]);
+                p = q;
+            }
+            len += Math.hypot(home.x - p.x, home.y - p.y);
+            legs.push([home.x, home.y, false]);
+            return { legs, speed: len / (duration / 1000) }; // 速度配合總時間，剛好飛 10~20 秒
+        }
+
         async function startBirdFlight(perchImg, token) {
             if (token !== window.birdFlightToken || !perchImg.isConnected) return;
             const hour = new Date().getHours();
-            if (isGardenPaused() || hour < 6 || hour >= 18) return scheduleBirdFlight(perchImg, token);
+            if (hour < 6 || hour >= 20) return scheduleBirdFlight(perchImg, token, 10 * 60 * 1000); // 晚上 8 點到早上 6 點在小屋休息，10 分鐘後再看看
+            if (isGardenPaused()) return scheduleBirdFlight(perchImg, token, 5000); // 花園被蓋住時，回到花園 5 秒內就飛
 
-            const wrapper = document.getElementById('garden-floor-wrapper');
-            const wr = wrapper.getBoundingClientRect();
             const pr = perchImg.getBoundingClientRect();
-            const home = { x: pr.left - wr.left, y: pr.top - wr.top };
+            if (!pr.width) return scheduleBirdFlight(perchImg, token, 5000); // 還沒排版好
+            const home = { x: pr.left, y: pr.top };
+            const sprite = perchImg.dataset.sprite;
             const bird = document.createElement('img');
             bird.className = 'flying-bluebird';
-            bird.style.width = pr.width + 'px'; // 跟停在小屋上的青鳥一樣大
-            const sprite = perchImg.dataset.sprite;
+            bird.style.width = pr.width + 'px'; // 跟停在小屋上的鳥一樣大
             bird.src = `${sprite}_fly_up_right.png`;
             bird.style.transform = `translate(${home.x}px, ${home.y}px)`;
-            wrapper.appendChild(bird);
+            document.body.appendChild(bird); // 放在花園外層，飛到天空才不會被花園的淡出遮罩蓋掉
             perchImg.style.visibility = 'hidden';
 
+            const { legs, speed } = planBirdRoute(home);
             let pos = { ...home };
-            const flyTo = async (x, y) => {
-                const dx = x - pos.x, dy = y - pos.y;
-                bird.src = `${sprite}_fly_${dy < 0 ? 'up' : 'down'}_${dx < 0 ? 'left' : 'right'}.png`;
-                await bird.animate([
-                    { transform: `translate(${pos.x}px, ${pos.y}px)` },
-                    { transform: `translate(${x}px, ${y}px)` }
-                ], { duration: Math.hypot(dx, dy) / BIRD_SPEED * 1000, easing: 'ease-in-out', fill: 'forwards' }).finished;
-                pos = { x, y };
-            };
-
             try {
-                if (Math.random() < 0.4) {
-                    // ✈️ 從畫面右邊飛出去，再從左邊飛回來
-                    await flyTo(wr.width * 0.45, home.y - 30);
-                    await flyTo(wr.width + 40, home.y - 10);
-                    pos = { x: -40, y: home.y + 60 };
-                    await flyTo(home.x + 40, home.y + 45);
-                    await flyTo(home.x, home.y);
-                } else {
-                    // 🔄 在大樹附近繞一圈
-                    for (const [ox, oy] of [[70, -40], [140, 10], [110, 70], [30, 80], [-20, 30], [0, 0]]) {
-                        await flyTo(home.x + ox, home.y + oy);
-                    }
+                for (const [x, y, jump] of legs) {
+                    if (jump) { pos = { x, y }; continue; }
+                    const dx = x - pos.x, dy = y - pos.y;
+                    bird.src = `${sprite}_fly_${dy < 0 ? 'up' : 'down'}_${dx < 0 ? 'left' : 'right'}.png`;
+                    await bird.animate([
+                        { transform: `translate(${pos.x}px, ${pos.y}px)` },
+                        { transform: `translate(${x}px, ${y}px)` }
+                    ], { duration: Math.hypot(dx, dy) / speed * 1000, easing: 'ease-in-out', fill: 'forwards' }).finished;
+                    pos = { x, y };
                 }
             } catch (e) {}
 
@@ -2158,7 +2193,7 @@
                 dogHouse.style.zIndex = Math.floor(houseY * 100 + houseX);
                 dogHouse.innerHTML = `<img src="house.png" class="pixel-prop">`;
                 dogHouse.style.cursor = 'pointer';
-                dogHouse.onclick = openGalleryModal; // 🌟 點狗屋直接打開成就圖鑑
+                dogHouse.onclick = () => openPetInfoByImg('house.png'); // 🌟 點狗屋打開狗屋的介紹
                 floor.appendChild(dogHouse);
 
                 // 2. 讓小狗出生在狗屋旁邊
@@ -2218,7 +2253,7 @@
                     gsHouse.style.zIndex = Math.floor(gsHouseY * 100 + gsHouseX);
                     gsHouse.innerHTML = `<img src="german_shepherd_house.png" class="pixel-prop">`;
                     gsHouse.style.cursor = 'pointer';
-                    gsHouse.onclick = openGalleryModal; // 🌟 點犬舍直接打開成就圖鑑
+                    gsHouse.onclick = () => openPetInfoByImg('german_shepherd_house.png'); // 🌟 點犬舍打開犬舍的介紹
                     floor.appendChild(gsHouse);
 
                     // 2. 讓德牧出生
@@ -2294,8 +2329,8 @@
                     const birdHouse = document.createElement('div');
                     birdHouse.className = 'tree-birdhouse';
                     birdHouse.innerHTML = `<img src="birdhouse.png" class="tree-birdhouse-img"><img src="bluebird_idle_left.png" class="tree-bluebird" data-sprite="bluebird">`;
-                    // 點小屋打開圖鑑；不要算進「連點大樹 5 下重新整理」
-                    birdHouse.onclick = (e) => { e.stopPropagation(); openGalleryModal(); };
+                    // 點小屋打開小屋的介紹；不要算進「連點大樹 5 下重新整理」
+                    birdHouse.onclick = (e) => { e.stopPropagation(); openPetInfoByImg('birdhouse.png'); };
                     tree.appendChild(birdHouse);
                     scheduleBirdFlight(birdHouse.querySelector('.tree-bluebird'), window.birdFlightToken);
                 }
@@ -2309,7 +2344,7 @@
                 const greenHouse = document.createElement('div');
                 greenHouse.className = 'tree-greenhouse';
                 greenHouse.innerHTML = `<img src="green_birdhouse.png" class="tree-birdhouse-img"><img src="greenbird_idle_right.png" class="tree-greenbird" data-sprite="greenbird">`;
-                greenHouse.onclick = (e) => { e.stopPropagation(); openGalleryModal(); };
+                greenHouse.onclick = (e) => { e.stopPropagation(); openPetInfoByImg('green_birdhouse.png'); };
                 greenTree.appendChild(greenHouse);
                 scheduleBirdFlight(greenHouse.querySelector('.tree-greenbird'), window.birdFlightToken);
             }
@@ -3008,16 +3043,19 @@
             const showGs = isPreviewDog || hasGs;
 
             // 點寵物卡片會跳出介紹 (內容在 PET_INFO)
-            petContainer.innerHTML = PET_INFO.map((p, i) => {
-                const showBird = isPreviewDog || localStorage.getItem('bird_unlocked_notified') === 'true';
-                const unlocked = p.unlockKey ? (isPreviewDog || localStorage.getItem(p.unlockKey) === 'true')
-                    : p.days === 7 ? showDog : p.days === 30 ? showGs : showBird;
-                return `
+            const showBird = isPreviewDog || localStorage.getItem('bird_unlocked_notified') === 'true';
+            const pets = PET_INFO.map((p, i) => ({
+                p, i,
+                unlocked: p.unlockKey ? (isPreviewDog || localStorage.getItem(p.unlockKey) === 'true')
+                    : p.days === 7 ? showDog : p.days === 30 ? showGs : showBird
+            }));
+            // 已解鎖的夥伴排在最前面 (各自維持原本順序)
+            pets.sort((a, b) => (b.unlocked - a.unlocked) || (a.i - b.i));
+            petContainer.innerHTML = pets.map(({ p, i, unlocked }) => `
                 <div class="gallery-item ${unlocked ? '' : 'locked'}" onclick="openPetInfo(${i}, ${unlocked})" style="cursor: pointer;">
                     <img src="${p.img}">
                     <div class="gallery-item-name">${unlocked ? p.name : '???'}</div>
-                </div>`;
-            }).join('');
+                </div>`).join('');
 
             // 2. 產生花朵區塊 HTML
             const flowerContainer = document.getElementById('gallery-flowers');
@@ -3045,7 +3083,47 @@
 
         // 🌸 點圖鑑裡的花：已收集的顯示介紹，還沒收集的只顯示剪影
         // 🐕 點圖鑑裡的寵物：已入住的顯示介紹，還沒入住的告訴媽媽要連續紀錄幾天
-        function openPetInfo(index, isUnlocked) {
+        // 屋子 ↔ 住在裡面的動物
+        const PET_PAIRS = {
+            'house.png': 'dog_down.png',
+            'german_shepherd_house.png': 'german_shepherd_bottom_left.png',
+            'birdhouse.png': 'bluebird_idle_right.png',
+            'green_birdhouse.png': 'greenbird_idle_right.png'
+        };
+        let petPair = null; // 從花園點屋子時 = { idx: [屋子, 動物], page: 0 或 1 }
+
+        // 點花園裡的狗屋 / 鳥屋：打開屋子的介紹，點一下視窗可以切換看住在裡面的動物 (看得到就代表已經解鎖)
+        function openPetInfoByImg(img) {
+            const house = PET_INFO.findIndex(p => p.img === img);
+            const animal = PET_INFO.findIndex(p => p.img === PET_PAIRS[img]);
+            if (house < 0) return;
+            petPair = animal >= 0 ? { idx: [house, animal], page: 0 } : null;
+            showPetPairPage();
+        }
+        function showPetPairPage() {
+            openPetInfo(petPair ? petPair.idx[petPair.page] : 0, true, true);
+            const dots = document.getElementById('pet-pair-dots');
+            const hint = document.getElementById('pet-pair-hint');
+            if (!petPair) { dots.style.display = 'none'; hint.style.display = 'none'; return; }
+            dots.style.display = 'flex';
+            dots.querySelectorAll('.pair-dot').forEach((d, i) => d.classList.toggle('active', i === petPair.page));
+            const other = PET_INFO[petPair.idx[1 - petPair.page]];
+            hint.style.display = 'block';
+            hint.innerText = petPair.page === 0 ? `👆 點一下，看看住在裡面的${other.name}` : `👆 點一下，回到${other.name}`;
+        }
+        // 點視窗裡任何地方 (關閉按鈕除外) 就切換屋子 / 動物
+        function togglePetPair(e) {
+            if (!petPair || e.target.closest('button')) return;
+            petPair.page = 1 - petPair.page;
+            showPetPairPage();
+        }
+
+        function openPetInfo(index, isUnlocked, keepPair) {
+            if (!keepPair) { // 從圖鑑打開的單一介紹：不顯示切換提示
+                petPair = null;
+                document.getElementById('pet-pair-dots').style.display = 'none';
+                document.getElementById('pet-pair-hint').style.display = 'none';
+            }
             const p = PET_INFO[index];
             const img = document.getElementById('flower-info-img');
             img.src = p.img;
@@ -3071,6 +3149,9 @@
         }
 
         function openFlowerInfo(file) {
+            petPair = null; // 花朵介紹沒有切換頁
+            document.getElementById('pet-pair-dots').style.display = 'none';
+            document.getElementById('pet-pair-hint').style.display = 'none';
             const unlocked = JSON.parse(localStorage.getItem('unlocked_flowers')) || [...DEFAULT_UNLOCKED_FLOWERS];
             const isUnlocked = unlocked.includes(file);
             const info = FLOWER_INFO[file];
