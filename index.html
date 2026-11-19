@@ -144,7 +144,8 @@
         }
 
         /* 下雨提醒：平常藏在畫面上方外面，.show 時滑下來 */
-        #rain-toast {
+        #celestial-hit { position: absolute; top: 3%; left: 5%; width: 5.5rem; height: 5.5rem; z-index: 11; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        #rain-toast, #garden-toast {
             position: fixed; top: 0; left: 50%; z-index: 250;
             transform: translate(-50%, -120%);
             transition: transform 0.5s ease;
@@ -155,7 +156,8 @@
             padding: 14px 16px; font-size: 1.05rem; font-weight: bold; line-height: 1.5; text-align: center;
             cursor: pointer;
         }
-        #rain-toast.show { transform: translate(-50%, 0); }
+        #rain-toast.show, #garden-toast.show { transform: translate(-50%, 0); }
+        #garden-toast { border-left-color: var(--primary); }
 
         /* 下雨時天空變灰、太陽變淡 */
         body.raining #garden-sky.sky-day { background: linear-gradient(to bottom, #8fa3b5 0%, #c9d4dd 45%, #c9d4dd 100%); }
@@ -289,7 +291,10 @@
             position: fixed; right: 20px; top: min(82%, calc(100% - 140px)); transform: translateY(-50%);
             display: flex; flex-direction: column; align-items: center; z-index: 20;
             opacity: 0.85; /* 稍微透明，讓後面的花草透出來 */
+            transition: transform 0.4s ease; /* 只動 transform，交給顯示卡處理，不會讓遊戲變慢 */
         }
+        /* 🪵 收起來：往右推到只露出 1/3 */
+        .game-sidebar.tucked { transform: translate(calc(66% + 20px), -50%); }
 
 
         /* =========================================
@@ -577,6 +582,8 @@
     <!-- 第一層：全螢幕 2.5D 花園 -->
     <div id="garden-world">
         <div id="garden-sky"></div>
+        <!-- ☀️🌙 太陽 / 月亮的點擊範圍 (花園地板蓋在天空上面，所以另外放一塊透明的按鈕) -->
+        <div id="celestial-hit" onclick="toggleGardenLayout()" aria-label="切換花園排列"></div>
         <div id="garden-floor"></div>
     </div>
 
@@ -790,6 +797,7 @@
 
 
     <!-- 🌧️ 下雨提醒：從上方滑下來，10 秒後自動收起 (一個禮拜最多一次) -->
+    <div id="garden-toast" onclick="this.classList.remove('show')"></div>
     <div id="rain-toast" onclick="dismissRainToast()">🌧️ 下雨了，動物們都要跑進屋子躲雨囉！</div>
 
     <!-- 🔑 花園通行碼 (第一次打開或通行碼更換時才會出現，不能關掉) -->
@@ -993,6 +1001,30 @@
             'flower_amaryllis.png': '孤挺花', 'flower_primrose.png': '報春花'
         };
         const ALL_FLOWERS = Object.keys(FLOWER_DIC);
+
+        // 🌈 每種花花瓣的主要顏色 (色相 0~360，從圖片算出來的；null = 白色花)，彩虹排列用
+        // 之後新增花朵時，記得在這裡補上它的顏色，沒補的會排在彩虹最後面
+        const FLOWER_HUE = {
+            amaryllis: 1, begonia: 353, bellflower: 265, bluebell: 245, camellia: 355, carnation: 354, cherryblossom: 336,
+            chrysanthemum: 39, cosmos: 330, crocus: 272, daffodil: 46, dahlia: 344, daisy: null, dandelion: 44, freesia: 39,
+            geranium: 348, hibiscus: 351, hyacinth: 253, hydrangea: 227, iris: 252, jasmine: null, lavender: 271, lily: null,
+            lotus: 328, magnolia: 340, marigold: 28, morningglory: 248, orchid: 322, pansy: 317, peony: 320, plumeria: 37,
+            poppy: 358, primrose: 321, rose: 357, snapdragon: 344, snowdrop: null, sunflower: 44, tulip: 354, violet: 253, zinnia: 8
+        };
+        // 彩虹順序：紅 → 橘 → 黃 → 白 → 粉 → 紫 → 藍
+        function rainbowKey(file) {
+            const name = file.replace('flower_', '').replace('.png', '');
+            if (!(name in FLOWER_HUE)) return 999;
+            const h = FLOWER_HUE[name];
+            if (h === null) return 75;          // 白色花排在黃色和粉色中間
+            if (h >= 345) return h - 360;       // 偏紫的紅 → 排在最前面
+            if (h <= 70) return h;              // 紅、橘、黃
+            return 80 + (345 - h);              // 粉 → 紫 → 藍
+        }
+        // 花園排列：'rainbow' 彩虹 (預設) / 'random' 自然隨機；點太陽或月亮切換
+        function getGardenLayout() {
+            try { return localStorage.getItem('garden_layout') || 'rainbow'; } catch (e) { return 'rainbow'; }
+        }
 
         // 🐕 圖鑑寵物區的介紹 (依圖鑑顯示順序；days = 連續紀錄幾天解鎖)
         const PET_INFO = [
@@ -1491,6 +1523,14 @@
                 showWitherNotice();
                 // 🐝 今天或昨天走路達標、還沒看過通知的，補跳蜜蜂通知
                 checkBeeNotice();
+                // 💡 第一次：告訴媽媽可以點太陽切換花園排列 (只提醒一次)
+                if (!localStorage.getItem('layout_hint_shown') && !window.layoutHintTimer) {
+                    window.layoutHintTimer = setTimeout(() => {
+                        if (document.getElementById('rain-toast').classList.contains('show')) { window.layoutHintTimer = null; return; } // 下雨提醒中，下次再說
+                        localStorage.setItem('layout_hint_shown', '1');
+                        showTopToast('💡 點一下天上的太陽（晚上是月亮），可以切換花園的排列方式喔！', 8000);
+                    }, 6000);
+                }
             } catch (error) { sendErrorLog(`讀取失敗: ${error.message}`); }
         }
 
@@ -1955,6 +1995,93 @@
             scheduleBirdFlight(perchImg, token);
         }
 
+        // =========================================
+        // 🌸 地板位置 → 手機畫面位置
+        // 花園地板斜 45 度又往後倒 (有透視)，所以先量地板上 4 個點在畫面上的位置，
+        // 算出換算公式 (平面透視轉換)，之後每個位置都能換算成畫面上的座標
+        // =========================================
+        const GARDEN_CENTER = { x: 45, y: 45 }; // 生長區中心 (地板座標 %)
+        function solveHomography(src, dst) {
+            // 解 8 個未知數：x' = (a x + b y + c) / (g x + h y + 1)、y' = (d x + e y + f) / (g x + h y + 1)
+            const A = [], B = [];
+            for (let i = 0; i < 4; i++) {
+                const [x, y] = src[i], [u, v] = dst[i];
+                A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.push(u);
+                A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); B.push(v);
+            }
+            for (let c = 0; c < 8; c++) { // 高斯消去法
+                let p = c;
+                for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+                [A[c], A[p]] = [A[p], A[c]]; [B[c], B[p]] = [B[p], B[c]];
+                for (let r = 0; r < 8; r++) {
+                    if (r === c) continue;
+                    const f = A[r][c] / A[c][c];
+                    for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k];
+                    B[r] -= f * B[c];
+                }
+            }
+            const h = B.map((b, i) => b / A[i][i]);
+            return (x, y) => {
+                const w = h[6] * x + h[7] * y + 1;
+                return { sx: (h[0] * x + h[1] * y + h[2]) / w, sy: (h[3] * x + h[4] * y + h[5]) / w };
+            };
+        }
+        function measureFloorProjection(floor) {
+            const pts = [[20, 20], [80, 20], [20, 80], [80, 80]];
+            const probes = pts.map(([x, y]) => {
+                const d = document.createElement('div');
+                d.style.cssText = `position:absolute;left:${x}%;top:${y}%;width:0;height:0;pointer-events:none;`;
+                floor.appendChild(d);
+                return d;
+            });
+            const scr = probes.map(p => { const r = p.getBoundingClientRect(); return [r.left, r.top]; });
+            probes.forEach(p => p.remove());
+            if (scr.some(([u, v]) => !isFinite(u) || !isFinite(v)) || Math.abs(scr[0][0] - scr[1][0]) < 1) return null; // 還沒排版好
+            return solveHomography(pts, scr);
+        }
+        // 每個位置在畫面上「離生長區中心多遠 (dist)」和「在哪個方向 (ang，0 = 正上方，順時針)」；量不到時用近似公式
+        function makeSpotScreen(floor) {
+            const proj = measureFloorProjection(floor);
+            let toScreen, side = 2.2;
+            if (proj) {
+                const c = proj(GARDEN_CENTER.x, GARDEN_CENTER.y);
+                toScreen = (x, y) => { const p = proj(x, y); return { sx: p.sx - c.sx, sy: p.sy - c.sy }; };
+                // 手機是直的：左右的距離放大來算，花園會長成「配合手機形狀的橢圓」，左右先碰到邊時，往下還有空間繼續長
+                side = Math.min(3, Math.max(1, (window.innerHeight - c.sy) / (window.innerWidth / 2)));
+            } else {
+                toScreen = (x, y) => {
+                    const dx = x - GARDEN_CENTER.x, dy = y - GARDEN_CENTER.y;
+                    return { sx: (dx - dy) / Math.SQRT2, sy: (dx + dy) / Math.SQRT2 * 0.31 };
+                };
+            }
+            return s => {
+                const p = toScreen(s.left, s.top);
+                return {
+                    dist: (p.sx * side) ** 2 + p.sy ** 2,
+                    ang: (Math.atan2(p.sx, -p.sy) * 180 / Math.PI + 360) % 360
+                };
+            };
+        }
+
+        // ☀️🌙 點太陽 / 月亮：彩虹排列 ↔ 自然隨機
+        function toggleGardenLayout() {
+            const next = getGardenLayout() === 'rainbow' ? 'random' : 'rainbow';
+            try { localStorage.setItem('garden_layout', next); localStorage.setItem('layout_hint_shown', '1'); } catch (e) {}
+            const floor = document.getElementById('garden-floor');
+            floor.style.transition = 'opacity 0.3s';
+            floor.style.opacity = '0';
+            setTimeout(() => { updateGardenLandscape25D(); floor.style.opacity = '1'; }, 300);
+            showTopToast(next === 'rainbow' ? '🌈 花園整理好了，同顏色的花都排在一起囉！' : '🌼 恢復自然種植，花兒們自由自在地開', 3000);
+        }
+        // 上方滑下來的小提醒 (跟下雨提醒同樣的樣子)
+        function showTopToast(text, ms) {
+            const t = document.getElementById('garden-toast');
+            t.innerText = text;
+            t.classList.add('show');
+            clearTimeout(window.gardenToastTimer);
+            window.gardenToastTimer = setTimeout(() => t.classList.remove('show'), ms);
+        }
+
         function updateGardenLandscape25D() {
             const now = new Date();
             const garden = computeGardenState();
@@ -2120,12 +2247,30 @@
                 availableFlowerSpots.push(...ringSpots);
             }
 
+            // 🌸 花從生長區往外「畫圓」長：依照在手機畫面上離生長區多遠排順序 (近的先種)
+            // 手機是直的、左右比較窄，用畫面上的距離排，花園會長成圓形，而不是往左右拉長的菱形
+            // 太靠近地平線 (X+Y 太小) 的位置不種花，免得花飄在天上
+            const spotScreen = makeSpotScreen(floor);
+            availableFlowerSpots.forEach(s => Object.assign(s, spotScreen(s)));
+            availableFlowerSpots = availableFlowerSpots
+                .filter(s => s.left + s.top >= 40)
+                .sort((a, b) => a.dist - b.dist);
+
             // 🌟 一次性加入 DOM，減少手機重排次數 🌟
             const fragment = document.createDocumentFragment();
 
             // 3. 把花種在各自固定的位置 (凋謝的位置會空出來，留給之後的新花)
             const usedSpotIndexes = new Set();
-            collectedPlants.forEach((flower) => {
+            // 🌈 彩虹排列：用「同樣這些位置」依顏色重新分配，每一朵花都有位置，不會少、也不會被藏起來
+            // 以生長區為中心，依方向 (從正上方順時針) 分成一塊塊扇形，顏色照彩虹順序：紅 → 橘 → 黃 → 白 → 粉 → 紫 → 藍
+            let plantList = collectedPlants;
+            if (getGardenLayout() === 'rainbow') {
+                const drawable = collectedPlants.filter(f => availableFlowerSpots[f.spot]);
+                const spots = drawable.map(f => f.spot).sort((a, b) => availableFlowerSpots[a].ang - availableFlowerSpots[b].ang);
+                const files = drawable.map(f => f.file).sort((a, b) => rainbowKey(a) - rainbowKey(b) || a.localeCompare(b));
+                plantList = files.map((file, i) => ({ file, spot: spots[i] }));
+            }
+            plantList.forEach((flower) => {
                 const spot = availableFlowerSpots[flower.spot];
                 if (!spot) return;
                 usedSpotIndexes.add(flower.spot);
@@ -3324,6 +3469,25 @@
         }
 
         initDynamicCalendarBtn();
+
+        // 🪵 右下角木牌：平常收在右邊只露出 1/3，點一下才拉出來；拉出來後 20 秒沒碰畫面就收回去
+        (function setupSidebarTuck() {
+            const bar = document.querySelector('.game-sidebar');
+            if (!bar) return;
+            let timer = null;
+            const resetTimer = () => { clearTimeout(timer); timer = setTimeout(() => bar.classList.add('tucked'), 20000); };
+            bar.classList.add('tucked');
+            // 收起來時，第一下只負責把木牌拉出來，不會誤按到裡面的按鈕
+            bar.addEventListener('click', (e) => {
+                if (!bar.classList.contains('tucked')) return;
+                e.stopPropagation();
+                e.preventDefault();
+                bar.classList.remove('tucked');
+                resetTimer();
+            }, true);
+            // 碰到畫面任何地方，就重新計算 20 秒
+            document.addEventListener('pointerdown', () => { if (!bar.classList.contains('tucked')) resetTimer(); }, true);
+        })();
         checkRealtimeWeather(); // 🌧️ 仁武區在下雨的話，花園也會下雨
         loadData();
 
