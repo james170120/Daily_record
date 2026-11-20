@@ -2048,6 +2048,69 @@
                 return { sx: (h[0] * x + h[1] * y + h[2]) / w, sy: (h[3] * x + h[4] * y + h[5]) / w };
             };
         }
+        // =========================================
+        // 🔍 兩指放大花園：兩指撐開 → 放大 1.5 倍 (以手指中間為中心)；兩指捏回 → 恢復 1 倍
+        // 放大時一指拖曳可以移動畫面，碰到邊緣就停住；只放大花園，木牌、提醒、各頁面都不受影響
+        // =========================================
+        const GARDEN_ZOOM = 1.5;
+        let gardenZoom = { s: 1, tx: 0, ty: 0 };
+        function applyGardenZoom(animate) {
+            const w = document.getElementById('garden-world');
+            w.style.transformOrigin = '0 0';
+            w.style.transition = animate ? 'transform 0.35s ease' : 'none';
+            w.style.transform = gardenZoom.s === 1 ? '' : `translate(${gardenZoom.tx}px, ${gardenZoom.ty}px) scale(${gardenZoom.s})`;
+        }
+        function clampGardenZoom() {
+            const w = document.getElementById('garden-world');
+            const W = w.offsetWidth, H = w.offsetHeight, s = gardenZoom.s;
+            gardenZoom.tx = Math.min(0, Math.max(W - W * s, gardenZoom.tx));
+            gardenZoom.ty = Math.min(0, Math.max(H - H * s, gardenZoom.ty));
+        }
+        function zoomGardenTo(s, mx, my) {
+            if (s === 1) gardenZoom = { s: 1, tx: 0, ty: 0 };
+            else { gardenZoom = { s, tx: mx * (1 - s), ty: my * (1 - s) }; clampGardenZoom(); } // 手指中間那一點放大後還在手指下面
+            applyGardenZoom(true);
+        }
+        function setupGardenPinch() {
+            const world = document.getElementById('garden-world');
+            let pinchStart = 0, pinched = false, pan = null, moved = false, noClickUntil = 0;
+            const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+            world.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) { pinchStart = dist(e.touches); pinched = false; pan = null; }
+                else if (e.touches.length === 1 && gardenZoom.s > 1) {
+                    pan = { x: e.touches[0].clientX, y: e.touches[0].clientY, tx: gardenZoom.tx, ty: gardenZoom.ty };
+                    moved = false;
+                }
+            }, { passive: true });
+            world.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && pinchStart && !pinched) {
+                    const r = dist(e.touches) / pinchStart;
+                    const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    if (r > 1.15 && gardenZoom.s === 1) { zoomGardenTo(GARDEN_ZOOM, mx, my); pinched = true; }
+                    else if (r < 0.87 && gardenZoom.s > 1) { zoomGardenTo(1); pinched = true; }
+                } else if (e.touches.length === 1 && pan) {
+                    const dx = e.touches[0].clientX - pan.x, dy = e.touches[0].clientY - pan.y;
+                    if (!moved && Math.abs(dx) + Math.abs(dy) > 8) moved = true;
+                    if (moved) {
+                        gardenZoom.tx = pan.tx + dx; gardenZoom.ty = pan.ty + dy;
+                        clampGardenZoom();
+                        applyGardenZoom(false);
+                    }
+                }
+            }, { passive: true });
+            world.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) pinchStart = 0;
+                if (e.touches.length === 0) {
+                    if (moved || pinched) noClickUntil = Date.now() + 400; // 拖曳或捏合後，不要誤觸到狗屋、太陽
+                    pan = null; moved = false; pinched = false;
+                }
+            }, { passive: true });
+            world.addEventListener('click', (e) => {
+                if (Date.now() < noClickUntil) { e.stopPropagation(); e.preventDefault(); }
+            }, true);
+        }
+
         function measureFloorProjection(floor) {
             const pts = [[20, 20], [80, 20], [20, 80], [80, 80]];
             const probes = pts.map(([x, y]) => {
@@ -2056,7 +2119,9 @@
                 floor.appendChild(d);
                 return d;
             });
-            const scr = probes.map(p => { const r = p.getBoundingClientRect(); return [r.left, r.top]; });
+            // 量的時候扣掉「兩指放大」的倍數，花的排列才不會因為放大而改變
+            const z = gardenZoom;
+            const scr = probes.map(p => { const r = p.getBoundingClientRect(); return [(r.left - z.tx) / z.s, (r.top - z.ty) / z.s]; });
             probes.forEach(p => p.remove());
             if (scr.some(([u, v]) => !isFinite(u) || !isFinite(v)) || Math.abs(scr[0][0] - scr[1][0]) < 1) return null; // 還沒排版好
             return solveHomography(pts, scr);
@@ -3531,6 +3596,7 @@
         }
 
         initDynamicCalendarBtn();
+        setupGardenPinch(); // 🔍 兩指放大花園
 
         // 🚫 長按不跳出系統選單 (Android 的長按選單、電腦右鍵)；輸入框照樣可以長按貼上
         document.addEventListener('contextmenu', (e) => {
