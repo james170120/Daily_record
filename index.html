@@ -46,7 +46,8 @@
 
         /* 🌟 省電：打開視窗或 App 切到背景時，暫停花園所有動畫 🌟 */
         body.paused #garden-world,
-        body.paused #garden-world * { animation-play-state: paused !important; }
+        body.paused #garden-world *,
+        body.panning #garden-world * { animation-play-state: paused !important; } /* 放大後拖曳畫面時，花草暫停搖擺 */
 
         /* =========================================
            1. 2.5D 等距視角 (Isometric) 復古農場
@@ -2058,7 +2059,15 @@
             const w = document.getElementById('garden-world');
             w.style.transformOrigin = '0 0';
             w.style.transition = animate ? 'transform 0.35s ease' : 'none';
-            w.style.transform = gardenZoom.s === 1 ? '' : `translate(${gardenZoom.tx}px, ${gardenZoom.ty}px) scale(${gardenZoom.s})`;
+            // 放大時把整個花園交給顯示晶片當成一張圖來移動 (translate3d + will-change)，拖曳時就不用每一格重畫
+            w.style.willChange = gardenZoom.s === 1 ? '' : 'transform';
+            w.style.transform = gardenZoom.s === 1 ? '' : `translate3d(${gardenZoom.tx}px, ${gardenZoom.ty}px, 0) scale(${gardenZoom.s})`;
+        }
+        // 拖曳時一秒可能收到上百次手指移動，合併成「每一個畫面只更新一次」
+        let panFrame = 0;
+        function schedulePanUpdate() {
+            if (panFrame) return;
+            panFrame = requestAnimationFrame(() => { panFrame = 0; applyGardenZoom(false); });
         }
         function clampGardenZoom() {
             const w = document.getElementById('garden-world');
@@ -2091,11 +2100,14 @@
                     else if (r < 0.87 && gardenZoom.s > 1) { zoomGardenTo(1); pinched = true; }
                 } else if (e.touches.length === 1 && pan) {
                     const dx = e.touches[0].clientX - pan.x, dy = e.touches[0].clientY - pan.y;
-                    if (!moved && Math.abs(dx) + Math.abs(dy) > 8) moved = true;
+                    if (!moved && Math.abs(dx) + Math.abs(dy) > 8) {
+                        moved = true;
+                        document.body.classList.add('panning'); // 拖曳時花草先停止搖擺，手機比較順
+                    }
                     if (moved) {
                         gardenZoom.tx = pan.tx + dx; gardenZoom.ty = pan.ty + dy;
                         clampGardenZoom();
-                        applyGardenZoom(false);
+                        schedulePanUpdate();
                     }
                 }
             }, { passive: true });
@@ -2104,6 +2116,7 @@
                 if (e.touches.length === 0) {
                     if (moved || pinched) noClickUntil = Date.now() + 400; // 拖曳或捏合後，不要誤觸到狗屋、太陽
                     pan = null; moved = false; pinched = false;
+                    document.body.classList.remove('panning'); // 放開手指，花草繼續搖擺
                 }
             }, { passive: true });
             world.addEventListener('click', (e) => {
