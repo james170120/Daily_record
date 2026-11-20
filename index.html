@@ -524,6 +524,21 @@
         .moving-dog {
             transition: left 3s linear, top 3s linear;
         }
+        /* 💤 小狗晚上趴在門口休息：往鏡頭方向挪一點點，才會蓋在狗屋門上 (不然 3D 排序會被狗屋擋住) */
+        .moving-dog.dog-resting { transform: rotateZ(-45deg) rotateX(-72deg) translateZ(40px); }
+        /* 💤 小狗晚上趴在門口休息：頭上慢慢飄出小小的 z */
+        .dog-zzz {
+            position: absolute; left: 20%; top: 30%; /* 圖的上方有一段透明，從趴下的頭上方開始飄 */
+            font: bold 1rem/1 sans-serif; color: #fff;
+            text-shadow: 0 0 2px rgba(40,50,80,0.8); /* 只有兩個 z，陰影不耗電；草地上才看得清楚 */
+            pointer-events: none; opacity: 0;
+            animation: dogZzz 3s ease-out infinite;
+        }
+        @keyframes dogZzz {
+            0% { transform: translate(0, 0) scale(0.7); opacity: 0; }
+            25% { opacity: 0.9; }
+            100% { transform: translate(-0.7rem, -1.2rem) scale(1.15); opacity: 0; }
+        }
 
 
         .garden-item img.pixel-flower {
@@ -1918,6 +1933,27 @@
             const h = new Date().getHours();
             return document.body.classList.contains('rain-shelter') || h >= 23 || h < 6;
         }
+        // 💤 晚上 8 點到 11 點：小狗回到狗屋門口趴著休息 (11 點以後照舊進屋睡覺；下雨就進屋躲雨)
+        function shouldDogRest() {
+            const h = new Date().getHours();
+            return h >= 20 && !shouldShelter();
+        }
+        // 小狗趴下 / 起來：換成休息的圖，頭上飄 z
+        function setDogResting(dogEl, imgEl, restSrc) {
+            imgEl.src = restSrc;
+            if (!dogEl.querySelector('.dog-zzz')) {
+                const z = document.createElement('span');
+                z.className = 'dog-zzz';
+                z.textContent = 'z';
+                dogEl.appendChild(z);
+            }
+        }
+        function clearDogResting(dogEl) {
+            delete dogEl.dataset.rest;
+            dogEl.classList.remove('dog-resting');
+            const z = dogEl.querySelector('.dog-zzz');
+            if (z) z.remove();
+        }
         // 停在小屋上的鳥：要躲就藏起來，可以出來就出現 (正在飛的鳥由飛行程式自己處理)
         function applyBirdShelter() {
             document.querySelectorAll('.tree-bluebird, .tree-greenbird').forEach(p => {
@@ -2531,8 +2567,29 @@
 
                 // 3. 啟動狗狗的漫步 AI (2.5D 十字走位法)
                 if (shouldShelter()) { dog.dataset.home = '1'; dog.style.visibility = 'hidden'; } // 一打開就在下雨 / 半夜：已經在屋裡
+                // 💤 休息時趴的位置：正好擋在狗屋門口 (比狗屋前面一點，才會蓋在門上、不被旁邊的花擋住)
+                const restX = houseX - 0.2, restY = houseY + 1.7;
+                const lieAtDoor = () => {
+                    dogX = restX; dogY = restY;
+                    dog.classList.add('dog-resting');
+                    dog.style.left = dogX + '%'; dog.style.top = dogY + '%';
+                    dog.style.zIndex = Math.floor(dogY * 100 + dogX);
+                };
+                if (!shouldShelter() && shouldDogRest()) { dog.dataset.rest = '1'; lieAtDoor(); setDogResting(dog, dogImg, 'dog_rest.png'); } // 一打開就是晚上：已經趴在門口
                 window.dogWalkTimer = setInterval(() => {
                     if (isGardenPaused()) return; // 🌟 看不到花園時，小狗也休息
+
+                    // 💤 晚上 8 點：走回狗屋門口，走到了就趴下休息
+                    if (shouldDogRest()) {
+                        if (!dog.dataset.rest) {
+                            dog.dataset.rest = '1';
+                            dogImg.src = dogX > restX ? 'dog_left.png' : 'dog_right.png';
+                            lieAtDoor();
+                            setTimeout(() => { if (dog.dataset.rest) setDogResting(dog, dogImg, 'dog_rest.png'); }, 3000);
+                        }
+                        return;
+                    }
+                    if (dog.dataset.rest) clearDogResting(dog); // 休息時間結束 (或要進屋了)，站起來
 
                     // 🌧️🌙 下雨或半夜：走回狗屋門口，然後進屋 (消失)；可以出門時從門口出來
                     if (shouldShelter()) {
@@ -2624,8 +2681,29 @@
                     };
 
                     if (shouldShelter()) { gsDog.dataset.home = '1'; gsDog.style.visibility = 'hidden'; }
+                    // 💤 休息時趴的位置：正好擋在犬舍門口
+                    const gsRestX = gsHouseX - 0.6, gsRestY = gsHouseY + 1.0;
+                    const gsLieAtDoor = () => {
+                        gsX = gsRestX; gsY = gsRestY;
+                        gsDog.classList.add('dog-resting');
+                        gsDog.style.left = gsX + '%'; gsDog.style.top = gsY + '%';
+                        gsDog.style.zIndex = Math.floor(gsY * 100 + gsX);
+                    };
+                    if (!shouldShelter() && shouldDogRest()) { gsDog.dataset.rest = '1'; gsLieAtDoor(); setDogResting(gsDog, gsImg, 'german_shepherd_rest.png'); }
                     window.gsWalkTimer = setInterval(() => {
                         if (isGardenPaused()) return;
+
+                        // 💤 晚上 8 點：走回犬舍門口，走到了就趴下休息
+                        if (shouldDogRest()) {
+                            if (!gsDog.dataset.rest) {
+                                gsDog.dataset.rest = '1';
+                                gsImg.src = gsX > gsRestX ? 'german_shepherd_top_left.png' : 'german_shepherd_bottom_right.png';
+                                gsLieAtDoor();
+                                setTimeout(() => { if (gsDog.dataset.rest) setDogResting(gsDog, gsImg, 'german_shepherd_rest.png'); }, 2500);
+                            }
+                            return;
+                        }
+                        if (gsDog.dataset.rest) clearDogResting(gsDog);
 
                         // 🌧️🌙 下雨或半夜：走回犬舍門口，然後進屋 (消失)
                         if (shouldShelter()) {
