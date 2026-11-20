@@ -551,6 +551,17 @@
         .flower-info-img { width: 7rem; height: 7rem; object-fit: contain; margin: 0 auto; image-rendering: pixelated; }
         .flower-info-img.locked { filter: brightness(0) opacity(0.2); }
         .flower-info-lang { display: inline-block; align-self: center; background: rgba(0, 188, 212, 0.12); color: var(--accent); font-weight: bold; font-size: 0.9rem; padding: 4px 12px; border-radius: 12px; }
+        /* 📊 寵物解鎖進度條 */
+        #pet-progress { margin: -22px 0 34px; } /* 往上靠近寵物圖案，跟下面的花朵圖鑑多留一點距離 */
+        .ms-streak { text-align: center; font-size: 0.95rem; color: var(--text-color); margin-bottom: 8px; }
+        .ms-streak strong { color: var(--primary); font-size: 1.15rem; }
+        .ms-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .ms-icon { width: 30px; height: 30px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
+        .ms-icon.locked { filter: brightness(0); opacity: 0.3; }
+        .ms-bar { position: relative; flex: 1; height: 26px; border-radius: 13px; background: #e9eef0; border: 1px solid var(--border); overflow: hidden; }
+        .ms-fill { position: absolute; top: 0; left: 0; bottom: 0; border-radius: 13px; background: linear-gradient(90deg, #aed581, #66bb6a); }
+        .ms-bar.done .ms-fill { background: linear-gradient(90deg, #ffd54f, #ffb300); }
+        .ms-text { position: relative; z-index: 1; display: block; text-align: center; line-height: 26px; font-size: 0.85rem; font-weight: bold; color: #33503a; text-shadow: 0 0 3px #fff, 0 0 3px #fff; white-space: nowrap; }
         .pair-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); display: inline-block; }
         .pair-dot.active { background: var(--primary); }
         .flower-info-tip { background: #fff8e1; border-left: 4px solid var(--warning); border-radius: 8px; padding: 10px 12px; text-align: left; font-size: 0.95rem; line-height: 1.6; color: var(--text-color); }
@@ -932,6 +943,8 @@
                 <div id="gallery-pets" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; width: 100%;">
                     <!-- JS 動態產生 -->
                 </div>
+                <!-- 還沒解鎖的寵物：連續紀錄天數進度條 (小柴犬 7 天、德國牧羊犬 30 天、青鳥 60 天)，解鎖後就不顯示 -->
+                <div id="pet-progress"></div>
 
                 <!-- 花朵區 -->
                 <div class="section-title" style="text-align: center;">🌸 花朵圖鑑 (<span id="gallery-flower-count">0/40</span>)</div>
@@ -3327,6 +3340,28 @@
         // =========================================
         // 🌟 打開成就圖鑑 Modal 與算繪邏輯
         // =========================================
+        // 📊 寵物解鎖進度條：依「連續紀錄天數」算，剩幾天的文字疊在進度條上
+        function renderPetProgress(milestones) {
+            const streak = window.consecutiveDays || 0;
+            const rows = milestones.filter(m => !m.unlocked).map(m => { // 已解鎖的不顯示
+                const pct = m.unlocked ? 100 : Math.min(100, Math.round(streak / m.days * 100));
+                const left = Math.max(0, m.days - streak);
+                const text = m.unlocked ? `${m.name} 已解鎖 🎉` : `還差 ${left} 天（${Math.min(streak, m.days)} / ${m.days} 天）`;
+                return `
+                <div class="ms-row">
+                    <img class="ms-icon ${m.unlocked ? '' : 'locked'}" src="${m.img}" alt="">
+                    <div class="ms-bar ${m.unlocked ? 'done' : ''}">
+                        <div class="ms-fill" style="width: ${pct}%"></div>
+                        <span class="ms-text">${text}</span>
+                    </div>
+                </div>`;
+            }).join('');
+            // 全部都解鎖了就整塊不顯示
+            document.getElementById('pet-progress').innerHTML = rows
+                ? `<div class="ms-streak">目前連續紀錄 <strong>${streak}</strong> 天</div>` + rows
+                : '';
+        }
+
         function openGalleryModal() {
             // 抓取解鎖狀態
             let unlockedFlowers = JSON.parse(localStorage.getItem('unlocked_flowers')) || [...DEFAULT_UNLOCKED_FLOWERS];
@@ -3343,6 +3378,11 @@
 
             // 點寵物卡片會跳出介紹 (內容在 PET_INFO)
             const showBird = isPreviewDog || localStorage.getItem('bird_unlocked_notified') === 'true';
+            renderPetProgress([
+                { img: 'dog_down.png', name: '小柴犬', days: 7, unlocked: showDog },
+                { img: 'german_shepherd_bottom_left.png', name: '德國牧羊犬', days: 30, unlocked: showGs },
+                { img: 'bluebird_idle_right.png', name: '青鳥', days: 60, unlocked: showBird }
+            ]);
             const pets = PET_INFO.map((p, i) => ({
                 p, i,
                 unlocked: p.unlockKey ? (isPreviewDog || localStorage.getItem(p.unlockKey) === 'true')
