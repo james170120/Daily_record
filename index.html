@@ -39,6 +39,11 @@
         /* 鎖定主畫面，避免任何滑動 */
         body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); overflow: hidden; touch-action: none; }
 
+        /* 🚫 長按螢幕不要跳出「選取文字 / 拷貝 / 儲存圖片」的選單 (輸入框照樣可以選字、貼上) */
+        * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        img { -webkit-user-drag: none; }
+        input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+
         /* 🌟 省電：打開視窗或 App 切到背景時，暫停花園所有動畫 🌟 */
         body.paused #garden-world,
         body.paused #garden-world * { animation-play-state: paused !important; }
@@ -3526,6 +3531,11 @@
         }
 
         initDynamicCalendarBtn();
+
+        // 🚫 長按不跳出系統選單 (Android 的長按選單、電腦右鍵)；輸入框照樣可以長按貼上
+        document.addEventListener('contextmenu', (e) => {
+            if (!e.target.closest('input, textarea, [contenteditable="true"]')) e.preventDefault();
+        });
 
         // 🪵 右下角木牌：平常收在右邊只露出 1/3，點一下才拉出來；拉出來後 20 秒沒碰畫面就收回去
         (function setupSidebarTuck() {
