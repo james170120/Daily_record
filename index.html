@@ -186,6 +186,9 @@
             50% { transform: rotate(10deg); }
         }
 
+        /* 🌸 花園的花：每 10 秒挑一種花，只有那一種搖 5 秒 (左右各擺兩次)，其他時間都不動，省電 */
+        .garden-item img.pixel-flower.sway-now { animation: windBreeze 2.5s ease-in-out 2; transform-origin: bottom center; }
+
         /* 🌟 移除 will-change：上百個元素各自開 GPU 圖層反而會讓手機發燙 🌟 */
         .swaying-plant {
             display: inline-block;
@@ -265,7 +268,7 @@
             position: absolute;
             transform-origin: bottom center;
             transform: rotateZ(-45deg) rotateX(-72deg);
-            text-shadow: -1px 4px 10px rgba(0,0,0,0.04);
+            /* 🌟 省電：拿掉 text-shadow (上千個花草各自算模糊陰影，很耗電、又幾乎看不出來) */
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
@@ -2365,6 +2368,15 @@
             // 手機是直的、左右比較窄，用畫面上的距離排，花園會長成圓形，而不是往左右拉長的菱形
             // 太靠近地平線 (X+Y 太小) 的位置不種花，免得花飄在天上
             const spotScreen = makeSpotScreen(floor);
+            // 🌟 省電：判斷地板上某個位置在不在手機畫面裡 (畫面外的花草就不放，少掉好幾百個圖層)
+            const floorProj = measureFloorProjection(floor);
+            window.floorProj = floorProj;
+            const viewW = window.innerWidth, viewH = window.innerHeight;
+            const onScreen = (x, y) => {
+                if (!floorProj) return true;
+                const p = floorProj(x, y);
+                return p.sx > -50 && p.sx < viewW + 50 && p.sy > -10 && p.sy < viewH + 60;
+            };
             availableFlowerSpots.forEach(s => Object.assign(s, spotScreen(s)));
             availableFlowerSpots = availableFlowerSpots
                 .filter(s => s.left + s.top >= 40)
@@ -2389,12 +2401,13 @@
                 if (!spot) return;
                 usedSpotIndexes.add(flower.spot);
 
+                // 🌟 省電：畫面外面的花不畫 (位置照樣保留，滑到畫面裡的才畫)
+                if (!onScreen(spot.left, spot.top)) return;
+
                 const pastPlant = document.createElement('div');
                 pastPlant.className = 'garden-item';
-                const delay = (Math.random() * -7).toFixed(2);
-
-                // 🌟 改為使用 img 標籤來載入真實圖片，並套用剛剛寫的 pixel-flower 類別 🌟
-                pastPlant.innerHTML = `<img src="${flower.file}" class="swaying-plant pixel-flower" style="animation-delay: ${delay}s" decoding="async">`;
+                // 🌟 省電：花園裡的花不再每朵各自搖擺 (幾百朵一起動，是手機發熱、放大拖曳卡頓的主因)
+                pastPlant.innerHTML = `<img src="${flower.file}" class="pixel-flower" decoding="async">`;
 
                 pastPlant.style.left = spot.left + '%';
                 pastPlant.style.top = spot.top + '%';
@@ -2464,6 +2477,7 @@
 
                     let gx = spot.left + spot.grassDx;
                     let gy = spot.top + spot.grassDy;
+                    if (!onScreen(gx, gy)) return; // 🌟 省電：畫面外的小草不畫
 
                     grass.style.left = gx + '%';
                     grass.style.top = gy + '%';
@@ -2593,17 +2607,14 @@
 
                     // 3. 啟動德牧的巡邏 AI (🌟 巡邏範圍 ±30，大狗跑得更遠)
                     // 花園地板是斜 45 度的，範圍大了容易走出手機畫面，
-                    // 所以先用一個看不見的「探路分身」試站目標點，跑出畫面就重抽 (最多 12 次)
+                    // 所以先算目標點在畫面上的位置，跑出畫面就重抽 (最多 12 次)
+                    // 🌟 省電：用地板 → 畫面的換算公式直接算，不再放一個看不見的分身去量 (每量一次整個花園都要重新排版)
                     const GS_RANGE = 30;
-                    const gsProbe = gsDog.cloneNode(true);
-                    gsProbe.style.visibility = 'hidden';
-                    gsProbe.style.transition = 'none';
-                    gsProbe.style.pointerEvents = 'none';
-                    floor.appendChild(gsProbe);
                     const gsOnScreen = (x, y) => {
-                        gsProbe.style.left = x + '%';
-                        gsProbe.style.top = y + '%';
-                        const b = gsProbe.getBoundingClientRect();
+                        const proj = window.floorProj;
+                        if (!proj) return true;
+                        const p = proj(x, y); // 德牧腳底在畫面上的位置
+                        const b = { left: p.sx - 22, right: p.sx + 22, top: p.sy - 45, bottom: p.sy };
                         const inScreen = b.left >= 0 && b.right <= window.innerWidth
                             && b.top >= window.innerHeight * 0.3 && b.bottom <= window.innerHeight;
                         // 也不要躲到右下角的木牌後面
@@ -3610,6 +3621,18 @@
 
         initDynamicCalendarBtn();
         setupGardenPinch(); // 🔍 兩指放大花園
+
+        // 🌸 微風：每 10 秒挑「一種」花，讓畫面上這種花一起搖 5 秒 (只動一小群，手機不會發熱)
+        setInterval(() => {
+            if (isGardenPaused() || document.body.classList.contains('panning')) return; // 看不到花園或正在拖曳時不搖
+            const flowers = [...document.querySelectorAll('#garden-floor .pixel-flower')];
+            if (!flowers.length) return;
+            const types = [...new Set(flowers.map(f => f.getAttribute('src')))];
+            const pick = types[Math.floor(Math.random() * types.length)];
+            const swaying = flowers.filter(f => f.getAttribute('src') === pick);
+            swaying.forEach(f => f.classList.add('sway-now'));
+            setTimeout(() => swaying.forEach(f => f.classList.remove('sway-now')), 5000);
+        }, 10000);
 
         // 🚫 長按不跳出系統選單 (Android 的長按選單、電腦右鍵)；輸入框照樣可以長按貼上
         document.addEventListener('contextmenu', (e) => {
