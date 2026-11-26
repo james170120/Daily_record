@@ -59,6 +59,8 @@ const renderer = new THREE.WebGLRenderer({
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.type = THREE.PCFShadowMap;   // 比 PCFSoft 便宜很多，低多邊形風格看不出差別
 container.appendChild(renderer.domElement);
+// iPhone 記憶體不夠時可能把 3D 畫面收回去；貼圖原圖已經丟掉省記憶體，所以直接重新整理最乾淨
+renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); setTimeout(() => location.reload(), 300); });
 initThumbs(renderer, getModel, placeModel);   // 圖鑑小圖用同一個 renderer 拍
 
 function applyQuality() {
@@ -129,13 +131,28 @@ spawnCloud(-17, 4.4, -13, 1.2);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.06;
-controls.enablePan = false;
+// 一指轉動、兩指縮放＋移動（只是移動鏡頭，不會多畫東西，舊手機也不會變慢）
+controls.enablePan = true;
+controls.screenSpacePanning = false;   // 沿著地面平移，鏡頭高度不變
+controls.panSpeed = 0.8;
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.minDistance = 5.5;
 controls.maxDistance = 32;
 controls.minPolarAngle = 0.22;
 controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
 const cameraGoal = { active: false, pos: new THREE.Vector3(), target: new THREE.Vector3() };
+// 兩指移動的範圍：不能把島移出畫面太遠（按上方島嶼按鈕就會回到正中間）
+const panLimit = { center: new THREE.Vector3(), radius: 6 };
+const panOff = new THREE.Vector3();
+function clampPan() {
+  panOff.subVectors(controls.target, panLimit.center).setY(0);
+  const over = panOff.length() - panLimit.radius;
+  if (over <= 0) return;
+  panOff.setLength(over);
+  controls.target.sub(panOff);
+  camera.position.sub(panOff);
+}
 let currentView = 'main';
 const BASE_OFFSET = new THREE.Vector3(3.6, 5.2, 10.2);
 const OVERVIEW_DIR = new THREE.Vector3(3.0, 9.6, 17.8).normalize();
@@ -159,14 +176,19 @@ function flyToView(key, immediate = false) {
   if (key === 'overview') {
     const f = overviewFrame();
     target = f.target;
-    pos = target.clone().addScaledVector(OVERVIEW_DIR, f.dist * portrait);
-    controls.maxDistance = Math.max(32, f.dist * portrait * 1.25);
+    // 手機直拿畫面很窄：距離至少要讓左右兩邊的島都放得進來
+    const halfH = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * aspect);
+    const dist = Math.max(f.dist * portrait, (f.radius * 0.92) / Math.sin(halfH));
+    pos = target.clone().addScaledVector(OVERVIEW_DIR, dist);
+    controls.maxDistance = Math.max(32, dist * 1.25);
+    panLimit.center.copy(f.target); panLimit.radius = f.radius * 0.8;
     aimShadow(f.target, f.radius);
   } else {
     const isl = world.byId[key];
     target = isl.basePos.clone().add(new THREE.Vector3(0, 0.7, 0));
     pos = target.clone().addScaledVector(BASE_OFFSET, (isl.cfg.radius / 4.35) * portrait);
     aimShadow(isl.basePos, isl.cfg.radius);
+    panLimit.center.copy(isl.basePos); panLimit.radius = isl.cfg.radius * 1.6;
     isl.ensureContent(ctx).then(wake).catch(showLoadError);
   }
 
@@ -1168,7 +1190,8 @@ function updateWorld(t) {
     if (!isl.content) continue;
 
     const dist = camera.position.distanceTo(tmpV.copy(isl.basePos));
-    isl.content.visible = dist < isl.cfg.radius * LOD_FACTOR;
+    // 群島全景：每座島都畫房子、樹、花（手機直拿時鏡頭更遠，不這樣會整片空空的）
+    isl.content.visible = currentView === 'overview' || dist < isl.cfg.radius * LOD_FACTOR;
     if (!isl.content.visible) continue;
     // 第二層細節：裝飾品、寵物、魚只畫「正在看的島」和很近的島
     const showDetail = isl.id === currentView || dist < DETAIL_DIST;
@@ -1241,6 +1264,7 @@ function loop(now) {
     }
   }
   controls.update();
+  if (!cameraGoal.active) clampPan();
   renderer.render(scene, camera);
 }
 
@@ -1266,7 +1290,7 @@ if (DEBUG) {
   debugEl.style.display = 'block';
   // 只有 ?debug=1 才開放，方便在主控台測試
   window.__island = {
-    world, ctx, camera, countWaterDays, computeFishUnlocked, meteorState, startStepSync,
+    world, ctx, camera, renderer, scene, controls, clampPan, countWaterDays, computeFishUnlocked, meteorState, startStepSync,
     setRecords(r) { recordsByDate = r; }
   };
 }

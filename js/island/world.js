@@ -25,6 +25,7 @@ const ALIASES = { tree: 'tree-01', rock: 'rock-04', house: 'small-red-house' };
 const urlFor = (key) => modelUrl(ALIASES[key] || key);
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');  // sw.js 會快取
+dracoLoader.setWorkerLimit(1);   // 解壓縮只開 1 個背景工人（預設 4 個，每個都要佔一份解碼器記憶體）
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 gltfLoader.setMeshoptDecoder(MeshoptDecoder);
@@ -33,10 +34,72 @@ const modelAnims = {};   // 有動畫的模型（例如風車）
 export function getModel(key) {
   if (!modelCache[key]) {
     modelCache[key] = new Promise((resolve, reject) => {
-      gltfLoader.load(urlFor(key), g => { modelAnims[key] = g.animations || []; resolve(g.scene); }, undefined, reject);
+      gltfLoader.load(urlFor(key), g => {
+        modelAnims[key] = g.animations || [];
+        shareTextures(g.scene);
+        resolve(g.scene);
+      }, undefined, reject);
     });
   }
   return modelCache[key];
+}
+
+// ------------------------------------------
+// 🧠 省記憶體：貼圖
+//   1. 很多模型用同一張調色盤貼圖，但每個 .glb 各帶一份 → 內容一樣的只留一張
+//   2. 貼圖送進顯示晶片之後，手機記憶體裡那份原圖就用不到了 → 丟掉
+//      （萬一 iPhone 把畫面資源收回去，main.js 會重新整理頁面，不會黑掉）
+// ------------------------------------------
+const textureByHash = new Map();
+let hashCanvas = null;
+function textureHash(tex) {
+  const img = tex.image;
+  if (!img || !img.width) return null;
+  try {
+    hashCanvas = hashCanvas || document.createElement('canvas');
+    hashCanvas.width = img.width; hashCanvas.height = img.height;
+    const c = hashCanvas.getContext('2d', { willReadFrequently: true });
+    c.clearRect(0, 0, img.width, img.height);
+    c.drawImage(img, 0, 0);
+    const px = c.getImageData(0, 0, img.width, img.height).data;
+    let h = 2166136261;   // FNV-1a，全部像素都算，一樣才算一樣
+    for (let i = 0; i < px.length; i += 1) h = Math.imul(h ^ px[i], 16777619);
+    return `${img.width}x${img.height}:${h >>> 0}:${tex.flipY}:${tex.wrapS}:${tex.wrapT}:${tex.magFilter}:${tex.minFilter}:${tex.colorSpace}`;
+  } catch (e) { return null; }
+}
+function releaseAfterUpload(tex) {
+  if (tex.userData.releases) return;
+  tex.userData.releases = true;
+  tex.onUpdate = () => {
+    const img = tex.image;
+    if (img && typeof img.close === 'function') img.close();   // ImageBitmap 立刻釋放
+    tex.source.data = null;                                     // 圖片元素交給瀏覽器回收
+    tex.onUpdate = null;
+  };
+}
+function shareTextures(root) {
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    for (const m of [].concat(o.material)) {
+      for (const k of ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'alphaMap']) {
+        const t = m[k];
+        if (!t || !t.isTexture) continue;
+        const h = textureHash(t);
+        if (h && textureByHash.has(h)) {
+          const keep = textureByHash.get(h);
+          if (keep !== t) {
+            if (typeof t.image?.close === 'function') t.image.close();
+            t.dispose();
+            m[k] = keep;
+          }
+        } else {
+          if (h) textureByHash.set(h, t);
+          releaseAfterUpload(t);
+        }
+      }
+    }
+  });
+  if (hashCanvas) { hashCanvas.width = hashCanvas.height = 1; }   // 暫存畫布也縮回去
 }
 
 // ------------------------------------------

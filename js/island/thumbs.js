@@ -25,12 +25,12 @@ export function initThumbs(r, gm, pm) { renderer = r; getModel = gm; placeModel 
 async function build(key) {
   const [kind, id] = key.split(':');
   if (kind === 'pet') {
-    if (id === 'shiba' || id === 'shepherd') return { obj: makeDog(id), dir: [0.9, 0.55, 1.4] };
-    return { obj: makeBird(id), dir: [0.9, 0.35, 1.3] };
+    if (id === 'shiba' || id === 'shepherd') return { obj: makeDog(id), dir: [0.9, 0.55, 1.4], disposeAfter: true };
+    return { obj: makeBird(id), dir: [0.9, 0.35, 1.3], disposeAfter: true };
   }
   if (kind === 'fish') {
     const f = FISH_INFO.find(x => x.id === id);
-    return { obj: makeFish(f.look), dir: [1, 0.35, 0.15] };   // 魚看側面
+    return { obj: makeFish(f.look), dir: [1, 0.35, 0.15], disposeAfter: true };   // 魚看側面
   }
   if (kind === 'decor') {
     const d = DECOR_INFO.find(x => x.id === id);
@@ -46,7 +46,7 @@ async function build(key) {
   throw new Error('未知的圖鑑圖：' + key);
 }
 
-function shoot({ obj, dir }, silhouette) {
+function shoot({ obj, dir, disposeAfter }, silhouette) {
   scene.add(obj);
   obj.updateMatrixWorld(true);
   const sphere = new THREE.Box3().setFromObject(obj).getBoundingSphere(new THREE.Sphere());
@@ -74,6 +74,8 @@ function shoot({ obj, dir }, silhouette) {
   scene.overrideMaterial = null;
   scene.remove(obj);
   rt.dispose();
+  // 寵物、魚是拍照專用新做的（不跟島上共用），拍完就把幾何釋放
+  if (disposeAfter) obj.traverse(n => { if (n.isMesh) n.geometry.dispose(); });
 
   // WebGL 的畫面是上下顛倒的，翻回來
   const canvas = document.createElement('canvas');
