@@ -12,6 +12,9 @@
 //     }))
 //   }
 // s（目前狀態）由 main.js 的 galleryState() 提供。
+// 不是格子的頁面（例如改版紀錄）：給 render() 自己畫內容，count() 是上方小字。
+
+import { VERSIONS } from './versions.js';
 
 export const GALLERY_TABS = [
   {
@@ -62,6 +65,25 @@ export const GALLERY_TABS = [
           (s.demo ? '' : `\n目前已經累計 ${s.totalDays} 天，再 ${Math.max(0, week * DECOR_DAYS_PER_ITEM - s.totalDays)} 天 📅`)
       };
     })
+  },
+  {
+    id: 'versions', label: '📜 改版',
+    count: () => '花園長大的故事',
+    render: () => {
+      const list = document.createElement('div');
+      list.className = 'ver-list';
+      VERSIONS.forEach((v, i) => {
+        const card = document.createElement('div');
+        card.className = 'ver-card' + (i === 0 ? ' newest' : '');
+        card.innerHTML = '<div class="ver-icon"></div><div><div class="ver-title"></div><div class="ver-date"></div><div class="ver-text"></div></div>';
+        card.querySelector('.ver-icon').textContent = v.icon;
+        card.querySelector('.ver-title').textContent = v.title + (i === 0 ? ' 🆕' : '');
+        card.querySelector('.ver-date').textContent = v.date;
+        card.querySelector('.ver-text').textContent = v.text;
+        list.appendChild(card);
+      });
+      return list;
+    }
   }
   // ⬇️ 之後新增的圖鑑加在這裡
 ];
@@ -83,6 +105,13 @@ export function createGallery(el, getState, showDetail) {
     });
 
     const tab = GALLERY_TABS.find(t => t.id === current);
+    if (tab.render) {
+      el.count.textContent = tab.count ? tab.count(s) : '';
+      el.body.innerHTML = '';
+      el.body.appendChild(tab.render(s));
+      el.body.scrollTop = 0;
+      return;
+    }
     const items = tab.items(s);
     const got = items.filter(i => i.unlocked).length;
     el.count.textContent = `已收集 ${got} / ${items.length}`;

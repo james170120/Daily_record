@@ -13,6 +13,9 @@ import { ALL_MODEL_URLS } from './models-catalog.js';
 import { petMode } from './pets.js';
 import { animateWings } from './critters.js';
 import { createGallery } from './gallery.js';
+import { LATEST } from './versions.js';
+import { createRecordPanel, RECORD_TYPES } from './record-panel.js';
+import { createHistoryPanel } from './history-panel.js';
 import { initThumbs, getThumb } from './thumbs.js';
 
 const container = document.getElementById('canvas-container');
@@ -461,6 +464,7 @@ function computePetUnlocks() {
 async function loadRecords() {
   if (DEMO) {
     counts = demoCounts(today, 75);   // 75 天：主島 50 朵種滿，花海島也開始有花
+    fillDemoRecords();
     picker = { pick: demoPicker(FLOWER_FILES), save() {}, newlyUnlocked: [] };
     return { offline: false };
   }
@@ -533,7 +537,6 @@ function totalBloomDays() {
 function updateBud() {
   const bud = world.byId.main.bud;
   const n = counts[today] || 0;
-  document.getElementById('record-count').textContent = n;
   if (!bud) return;
   bud.sprout.visible = n > 0;
   bud.sprout.scale.setScalar(0.2 + Math.min(n, 11) * 0.045);
@@ -563,24 +566,31 @@ function bloomCardText(f) {
 // 從主程式記完回到群島：重新讀一次今天的筆數，花苞馬上長大
 // 換日了（過了半夜）就重新整理，讓昨天的今日之花開出來
 async function refreshToday() {
-  if (DEMO || Date.now() - lastFetch < 20000) return;
+  if (DEMO) return;
+  if (!stepSyncPending && Date.now() - lastFetch < 20000) return;
   if (dateKey(new Date()) !== today) { location.reload(); return; }
   try {
     const r = await fetchRecords();
     lastFetch = Date.now();
-    counts[today] = r.counts[today] || 0;
+    counts = r.counts;
+    recordsByDate = r.recordsByDate;
     updateBud();
+    if (stepSyncPending) {
+      stepSyncPending = false;
+      const steps = (recordsByDate?.[today] || []).filter(x => x.type === '步數').map(x => parseInt(x.content) || 0);
+      const max = steps.length ? Math.max(...steps) : 0;
+      if (max > stepsBeforeSync) {
+        openModal('👣', '步數收到了！', `今天已經走了 ${max} 步` + (max >= 3000 ? '，勤勞的蜜蜂也飛來了 🐝' : '，繼續加油 👣'));
+        checkNewUnlocks();
+      } else {
+        openModal('👣', '還沒收到步數', '捷徑好像還沒跑完，或沒有成功。\n可以等一下再回來看，或按「📝 記錄」→「步數」自己輸入。');
+      }
+    }
   } catch (e) { /* 沒網路就維持原樣 */ }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshToday(); });
 
-// --- 測試按鈕：模擬記錄、模擬過了一天 ---
-function recordOne() {
-  counts[today] = (counts[today] || 0) + 1;
-  updateBud();
-  if (currentView !== 'main') flyToView('main');
-  setTip(`🌱 今日花苞長大了！今天記了 ${counts[today]} 筆`);
-}
+// --- 測試按鈕：模擬過了一天 ---
 
 async function passOneDay() {
   const n = counts[today] || 0;
@@ -656,7 +666,134 @@ document.getElementById('modal-close-btn').addEventListener('click', () => {
   isPaused = false;
   wake();
   if (pendingAnnouncements.length) setTimeout(() => pendingAnnouncements.shift()(), 400);
+  else if (reloadAfterModal) location.reload();   // 記錄後島上有新東西（新寵物、魚、裝飾品、補登昨天）
 });
+
+// ==========================================
+// 📝 記錄（js/island/record-panel.js）
+// ==========================================
+let reloadAfterModal = false;
+let stepSyncPending = false, stepsBeforeSync = 0;
+const demoRecords = {};   // 展示模式：記在這裡，不上傳
+
+// 展示模式：依假資料的每天筆數，生出看起來像真的紀錄（月曆、紀錄表才有東西看）
+function fillDemoRecords() {
+  const samples = [
+    ['早餐', 'food', '', () => '稀飯、荷包蛋、青菜'], ['午餐', 'food', '', () => '糙米飯、滷雞腿、炒高麗菜'],
+    ['晚餐', 'food', '', () => '魚湯、地瓜葉'], ['喝水', 'water', '', (r) => String([250, 300, 500][Math.floor(r * 3)])],
+    ['血壓', 'bp', '早上', (r) => `${118 + Math.floor(r * 30)}/${72 + Math.floor(r * 18)} 脈搏${68 + Math.floor(r * 15)}`],
+    ['血糖', 'glucose', '', (r) => String(95 + Math.floor(r * 70))], ['吃藥', 'medical', '早', () => '降血壓藥'],
+    ['步數', 'steps', '', (r) => String(1500 + Math.floor(r * 4000))], ['胰島素', 'medical', '晚', () => '8'],
+    ['血壓', 'bp', '晚上', (r) => `${122 + Math.floor(r * 26)}/${75 + Math.floor(r * 15)} 脈搏${70 + Math.floor(r * 12)}`],
+    ['身體狀況', 'status', '', () => '精神不錯']
+  ];
+  const times = ['07:30', '12:10', '18:20', '09:00', '08:00', '07:45', '08:30', '16:00', '21:00', '20:00', '10:00'];
+  Object.keys(counts).forEach(date => {
+    let seed = 0;
+    for (const ch of date) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) | 0; return (seed >>> 0) / 4294967296; };
+    demoRecords[date] = Array.from({ length: Math.min(counts[date], samples.length) }, (_, i) => {
+      const [type, category, period, make] = samples[i];
+      return { id: date + i, date, time: type === '血壓' ? (period === '早上' ? '08:00' : '20:00') : times[i], period, type, category, content: make(rnd()) };
+    });
+  });
+}
+
+function recordsFor(date) {
+  if (DEMO) return demoRecords[date] || [];
+  return recordsByDate?.[date] || [];
+}
+
+async function postRecord(payload) {
+  try {
+    const res = await fetch(N8N_POST_URL, { method: 'POST', headers: gardenHeaders(true), body: JSON.stringify(payload) });
+    if (isKeyRejected(res)) return 'rejected';
+    return res.ok ? 'ok' : 'error';
+  } catch (e) {
+    return 'error';
+  }
+}
+
+// 記錄之後，看看有沒有解鎖新東西（寵物、魚、裝飾品）→ 有的話跳通知，關掉後重新整理讓它們出現
+function checkNewUnlocks() {
+  const before = {
+    pets: JSON.stringify(ctx.petUnlocks || {}),
+    fish: (ctx.fishUnlocked || []).length,
+    decor: (ctx.decorUnlocked || new Set()).size
+  };
+  ctx.waterDays = countWaterDays();
+  const pets = computePetUnlocks();
+  const fish = computeFishUnlocked();
+  const decor = computeDecorUnlocked();
+  if (JSON.stringify(pets) !== before.pets || fish.length !== before.fish || decor.size !== before.decor) {
+    reloadAfterModal = true;
+    if (JSON.stringify(pets) !== before.pets) announce_('🐾', '有新朋友搬來寵物島了！', '連續記錄的日子到了，關掉這個視窗後，到寵物島看看牠吧！');
+  }
+}
+
+const recordPanel = createRecordPanel({
+  root: document.getElementById('rec-modal'),
+  demo: DEMO,
+  getRecords: recordsFor,
+  save: postRecord,
+  onOpenHistory: () => openHistory(),
+  onKeyRejected: () => { Store.remove('garden_key'); askGardenKey('花園通行碼已經更換，請重新輸入').then(() => location.reload()); },
+  onStepSyncStart: () => {
+    stepSyncPending = true;
+    const steps = recordsFor(today).filter(x => x.type === '步數').map(x => parseInt(x.content) || 0);
+    stepsBeforeSync = steps.length ? Math.max(...steps) : 0;
+  },
+  async onSaved({ payload, demo, message }) {
+    const isNew = payload.id == null;
+    if (demo) {
+      const list = demoRecords[payload.date] = demoRecords[payload.date] || [];
+      if (isNew) {
+        list.push({ ...payload, id: Date.now() });
+        counts[payload.date] = (counts[payload.date] || 0) + 1;
+      } else {
+        const i = list.findIndex(r => r.id === payload.id);
+        if (i >= 0) list[i] = { ...payload };
+      }
+    } else {
+      try {
+        const r = await fetchRecords();
+        lastFetch = Date.now();
+        counts = r.counts;
+        recordsByDate = r.recordsByDate;
+      } catch (e) { if (isNew) counts[payload.date] = (counts[payload.date] || 0) + 1; }
+    }
+    updateBud();
+    if (payload.date === today && currentView !== 'main') flyToView('main');
+    const n = counts[today] || 0;
+    const tail = payload.date === today ? `\n\n🌱 今天已經記了 ${n} 筆，今日花苞又長大了！` : '';
+    openModal(RECORD_TYPES.find(t => t.type === payload.type)?.emoji || '📝', '紀錄好囉！',
+      message + tail + (demo ? '\n\n（展示模式：沒有真的上傳）' : ''));
+    if (payload.date !== today) reloadAfterModal = !demo;     // 補登昨天：昨天的今日之花要重新開
+    if (!demo) checkNewUnlocks();
+  }
+});
+
+async function needKey() {
+  if (DEMO || getGardenKey()) return false;
+  await askGardenKey('');
+  location.reload();
+  return true;
+}
+async function openRecordPanel(date) {
+  if (await needKey()) return;
+  recordPanel.open(date);
+}
+const historyPanel = createHistoryPanel({
+  root: document.getElementById('his-modal'),
+  getRecords: recordsFor,
+  onAddRecord: (date) => openRecordPanel(date)
+});
+async function openHistory() {
+  if (await needKey()) return;
+  historyPanel.open();
+}
+document.getElementById('btn-rec').addEventListener('click', () => openRecordPanel());
+document.getElementById('btn-hist').addEventListener('click', openHistory);
 
 // 📖 圖鑑：花／寵物／魚／裝飾品（新增分頁見 js/island/gallery.js 的 GALLERY_TABS）
 function galleryState() {
@@ -695,7 +832,34 @@ const gallery = createGallery({
 });
 function openGallery(tab) { gallery.open(tab); }
 document.getElementById('btn-gallery').addEventListener('click', () => openGallery());
-document.getElementById('gal-close').addEventListener('click', () => gallery.close());
+document.getElementById('gal-close').addEventListener('click', () => {
+  gallery.close();
+  if (!booting && pendingAnnouncements.length) setTimeout(() => pendingAnnouncements.shift()(), 400);   // 看完改版紀錄，接著顯示解鎖通知
+});
+
+// 🎉 改版大驚喜：改版後第一次打開，跳出一次說明（?whatsnew=1 可以再看一次）
+const newModal = document.getElementById('new-modal');
+const SEEN_VERSION_KEY = (DEMO ? 'demo_' : '') + 'island_seen_version';
+function queueWhatsNew() {
+  const force = new URLSearchParams(location.search).has('whatsnew');
+  if (!force && localStorage.getItem(SEEN_VERSION_KEY) === LATEST.id) return;
+  pendingAnnouncements.unshift(() => {   // 排在所有解鎖通知前面
+    document.getElementById('new-text').textContent = LATEST.popup;
+    newModal.classList.add('show');
+    renderer.render(scene, camera);
+    isPaused = true;
+  });
+}
+function closeWhatsNew(thenGallery) {
+  localStorage.setItem(SEEN_VERSION_KEY, LATEST.id);
+  newModal.classList.remove('show');
+  isPaused = false;
+  wake();
+  if (thenGallery) openGallery('versions');
+  else if (pendingAnnouncements.length) setTimeout(() => pendingAnnouncements.shift()(), 400);
+}
+document.getElementById('new-ok').addEventListener('click', () => closeWhatsNew(false));
+document.getElementById('new-more').addEventListener('click', () => closeWhatsNew(true));
 
 // 🔑 花園通行碼（跟主程式同一組；在主程式輸入過，這裡就不會出現）
 const keyModal = document.getElementById('key-modal');
@@ -726,7 +890,6 @@ function askGardenKey(msg) {
 
 document.getElementById('btn-time').addEventListener('click', () => setNight(!isNight));
 document.getElementById('btn-rain').addEventListener('click', () => setRaining(!isRaining, false));
-document.getElementById('btn-record').addEventListener('click', recordOne);
 document.getElementById('btn-nextday').addEventListener('click', () => passOneDay().catch(showLoadError));
 document.getElementById('btn-quality').addEventListener('click', () => {
   qualityKey = qualityKey === 'saver' ? 'normal' : 'saver';
@@ -811,7 +974,35 @@ function handleTap(hit) {
   const isl = hit.island;
   if (isl && !isl.unlocked) { setTip(`🔒 ${isl.cfg.name}還沒解鎖，長按看看怎麼解鎖`); return; }
   if (isl && isl.id !== currentView) { flyToView(isl.id); return; }
+  if (hit.kind === 'object' && hit.data.forceRefresh && treeTapped()) return;
   if (hit.kind === 'flower' || hit.kind === 'object') setTip('👆 手指按住 1 秒，就能看介紹喔');
+}
+
+// 🌳 大樹連點 5 下（每下間隔 2 秒內）：抓最新版重新開啟，跟舊版花園一樣
+let treeTaps = 0, treeTapTimer = 0;
+function treeTapped() {
+  treeTaps++;
+  clearTimeout(treeTapTimer);
+  if (treeTaps >= 5) {
+    treeTaps = 0;
+    setTip('🔄 正在更新到最新版...');
+    const go = () => {
+      const q = new URLSearchParams(location.search);
+      q.set('v', Date.now());
+      location.replace(location.pathname + '?' + q.toString());
+    };
+    const sw = navigator.serviceWorker;
+    if (!sw) { go(); return true; }
+    sw.getRegistration()
+      .then(r => r && r.update())
+      .catch(() => {})
+      .finally(go);
+    setTimeout(go, 3000);   // 網路卡住也不要等太久
+    return true;
+  }
+  treeTapTimer = setTimeout(() => { treeTaps = 0; }, 2000);
+  if (treeTaps >= 3) { setTip(`🌳 再點 ${5 - treeTaps} 下就會更新`); return true; }
+  return false;
 }
 
 function cancelPress() {
@@ -1080,6 +1271,7 @@ async function start() {
     setNight(isNight);
     wake();
     booting = false;
+    queueWhatsNew();
     if (pendingAnnouncements.length) setTimeout(() => pendingAnnouncements.shift()(), 1200);
     precacheModelsWhenIdle();
   } catch (err) {

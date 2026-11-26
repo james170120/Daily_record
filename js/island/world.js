@@ -386,7 +386,8 @@ const CONTENT_BUILDERS = {
     mainTree.position.set(-0.65, GRASS_TOP_Y, -0.75);
     addInteractable(island, mainTree, {
       icon: '🌳', title: '主花島守護大樹',
-      desc: '見證每日健康紀錄成長的大樹！主花島種滿花之後，浮石橋就會通到新的花島。'
+      desc: '見證每日健康紀錄成長的大樹！主花島種滿花之後，浮石橋就會通到新的花島。',
+      forceRefresh: true   // 連點 5 下：強制更新（main.js handleTap）
     });
     content.add(mainTree);
     island.occupied.push({ x: -0.65, z: -0.75, r: 1.45 });

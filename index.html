@@ -65,12 +65,120 @@
       background: #2ecc71; color: #fff; font-size: 1.05rem; font-weight: bold; cursor: pointer;
     }
 
+    /* 📝 記錄視窗：字大、按鈕大 */
+    .rec-card { max-width: 420px; text-align: left; max-height: 92vh; overflow-y: auto; }
+    .rec-title { text-align: center; font-size: 1.35rem; margin: 0 0 12px; color: #2c3e50; }
+    .rec-days { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .rec-day, .rec-period, .rec-chip {
+      border: 2px solid #dfe6ea; background: #f7fafb; border-radius: 12px; padding: 10px 6px;
+      font-weight: 600; font-size: 1rem; font-family: inherit; color: #4a5a68; cursor: pointer;
+    }
+    .rec-day.on, .rec-period.on { background: #2ecc71; border-color: #27ae60; color: #fff; }
+    .rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .rec-type {
+      position: relative; border: 2px solid #e6eef2; background: #fff; border-radius: 16px;
+      padding: 12px 4px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-family: inherit; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .rec-type:active { transform: scale(0.96); }
+    .rec-type.done { border-color: #9be7b8; background: #f1fcf5; }
+    .rec-emoji { font-size: 2rem; line-height: 1.1; }
+    .rec-label { font-size: 1rem; font-weight: 700; color: #34495e; }
+    .rec-badge { position: absolute; top: 5px; right: 6px; background: #2ecc71; color: #fff; font-size: 0.75rem; font-weight: 700; border-radius: 10px; padding: 1px 6px; }
+    .rec-hint { color: #6b7c88; font-size: 0.95rem; margin: 10px 0 0; line-height: 1.5; }
+    .rec-form { display: flex; flex-direction: column; gap: 6px; }
+    .rec-q { font-weight: 700; color: #34495e; font-size: 1rem; margin-top: 8px; }
+    .rec-input {
+      width: 100%; padding: 13px 12px; font-size: 1.15rem; border: 2px solid #dfe6ea; border-radius: 12px;
+      user-select: text; -webkit-user-select: text; font-family: inherit; background: #fff;
+    }
+    .rec-input:focus { outline: none; border-color: #2ecc71; }
+    .rec-periods { display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 8px; }
+    .rec-bp { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .rec-bp .rec-q { font-size: 0.85rem; }
+    .rec-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+    .rec-msg { color: #e74c3c; font-weight: 700; min-height: 1.2em; margin: 8px 0 0; white-space: pre-line; }
+    .rec-msg.warn { color: #d35400; }
+    .rec-history { margin-top: 12px; background: #f7fafb; border-radius: 12px; padding: 8px 10px; }
+    .rec-hist-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid #e6eef2; }
+    .rec-hist-text { color: #34495e; font-size: 0.95rem; }
+    .rec-hist-row .rec-chip { padding: 6px 12px; font-size: 0.9rem; }
+    .rec-foot { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+    .rec-save {
+      flex: 2; border: none; border-radius: 14px; padding: 15px; background: #2ecc71; color: #fff;
+      font-size: 1.15rem; font-weight: 800; font-family: inherit; cursor: pointer;
+    }
+    .rec-auto { flex: none; width: 100%; background: #3498db; margin-top: 4px; }
+    .rec-cancel {
+      flex: 1; border: 2px solid #dfe6ea; border-radius: 14px; padding: 13px; background: #fff;
+      color: #4a5a68; font-size: 1.05rem; font-weight: 700; font-family: inherit; cursor: pointer;
+    }
+    .rec-link { flex: 2; color: #2980b9; font-weight: 700; text-decoration: none; font-size: 1rem; }
+
+    /* 📅 月曆與紀錄表 */
+    .his-card { max-width: 460px; }
+    .rec-link { border: none; background: none; text-align: left; padding: 0; cursor: pointer; font-family: inherit; }
+    .his-nav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin: 4px 0 10px; }
+    .his-month { text-align: center; font-weight: 800; font-size: 1.1rem; color: #2c3e50; }
+    .his-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .his-week { text-align: center; font-size: 0.85rem; font-weight: 700; color: #95a5a6; padding: 2px 0; }
+    .his-day {
+      min-height: 58px; border: 1.5px solid #edf1f3; background: #fbfcfd; border-radius: 10px; padding: 3px 1px;
+      display: flex; flex-direction: column; align-items: center; gap: 1px; font-family: inherit; cursor: pointer;
+    }
+    .his-day.empty { border: none; background: none; cursor: default; }
+    .his-day.has { background: #f1fcf5; border-color: #bfe9cf; }
+    .his-day.today { border: 2.5px solid #f39c12; }
+    .his-num { font-weight: 800; font-size: 0.95rem; color: #34495e; }
+    .his-icons { font-size: 0.72rem; line-height: 1.1; letter-spacing: -1px; }
+    .his-count { font-size: 0.68rem; color: #27ae60; font-weight: 700; }
+    .his-detail { display: flex; flex-direction: column; gap: 9px; }
+    .his-group { border-left: 5px solid #ccc; background: #f8fafb; border-radius: 10px; padding: 8px 10px; }
+    .his-group-title { font-weight: 800; color: #34495e; margin-bottom: 4px; }
+    .his-empty { color: #b2bec3; font-size: 0.9rem; }
+    .his-item { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-top: 1px dashed #e3e8eb; font-size: 1rem; color: #2c3e50; }
+    .his-item:first-of-type { border-top: none; }
+    .his-tag { color: #7f8c8d; font-size: 0.85rem; white-space: nowrap; }
+    .his-table-wrap { max-height: 46vh; overflow-y: auto; border-radius: 10px; border: 1px solid #e6eef2; }
+    .his-table { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
+    .his-table th { position: sticky; top: 0; background: #2ecc71; color: #fff; padding: 8px 4px; font-size: 0.9rem; }
+    .his-table td { border-top: 1px solid #eef2f4; padding: 7px 5px; text-align: center; vertical-align: middle; color: #2c3e50; }
+    .his-date { white-space: pre-line; font-size: 0.85rem; color: #7f8c8d !important; width: 22%; }
+    .his-bp, .his-glu { display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: wrap; padding: 1px 0; }
+    .his-bp-val { font-weight: 800; }
+    .his-bp-val.high { color: #e74c3c; }
+    .his-bp-val.low { color: #2980b9; }
+    .his-flag { font-size: 0.72rem; font-weight: 700; color: #fff; border-radius: 6px; padding: 1px 5px; }
+    .his-flag.high { background: #e74c3c; }
+    .his-flag.low { background: #3498db; }
+    .his-pulse { font-size: 0.8rem; color: #7f8c8d; }
+    .his-glu-val { font-weight: 800; color: #16a085; }
+    .his-dash { color: #b2bec3; }
+    .his-none { padding: 26px 6px !important; color: #95a5a6 !important; }
+    .rec-hint { white-space: pre-line; }
+
     #gal-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 8px; }
     .gal-tab {
       border: none; border-radius: 12px; padding: 9px 2px; background: #eef3f6;
       font-family: inherit; font-size: 0.92rem; font-weight: 700; color: #4a5a68; cursor: pointer;
     }
     .gal-tab.active { background: #2ecc71; color: #fff; }
+    /* 📜 改版紀錄：媽媽眼睛不好，字放大、每項只有一兩句 */
+    .ver-list { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+    .ver-card { display: flex; gap: 12px; align-items: flex-start; background: #f7f9f8; border-radius: 16px; padding: 12px 14px; }
+    .ver-card.newest { background: #fff7e6; box-shadow: inset 0 0 0 2px #f5b041; }
+    .ver-icon { font-size: 2.2rem; line-height: 1; flex: none; }
+    .ver-title { font-size: 1.2rem; font-weight: 800; color: #2c3e50; }
+    .ver-date { font-size: 0.95rem; color: #7f8c8d; margin: 2px 0 4px; }
+    .ver-text { font-size: 1.1rem; line-height: 1.6; color: #34495e; }
+    /* 🎉 改版大驚喜 */
+    .new-card { max-width: 340px; }
+    .new-burst { font-size: 4.2rem; line-height: 1; animation: new-pop 0.9s ease-out both; }
+    @keyframes new-pop { 0% { transform: scale(0.2) rotate(-30deg); opacity: 0; } 60% { transform: scale(1.25) rotate(8deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+    .modal-card h3.new-title { font-size: 1.7rem; color: #e67e22; margin: 8px 0 10px; }
+    .modal-card p.new-text { font-size: 1.2rem; line-height: 1.7; color: #2c3e50; margin: 0 0 16px; }
+    .new-btn { width: 100%; border: none; border-radius: 16px; padding: 14px; font-size: 1.2rem; font-weight: 800; color: #fff; background: #2ecc71; cursor: pointer; }
+    .new-more { width: 100%; margin-top: 8px; border: none; background: none; padding: 10px; font-size: 1.05rem; color: #7f8c8d; cursor: pointer; }
     #gal-count { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 8px; }
     #gal-body { max-height: 52vh; overflow-y: auto; margin-bottom: 14px; }
     .achv-img { width: 54px; height: 54px; object-fit: contain; image-rendering: pixelated; }
@@ -121,14 +229,14 @@
     <!-- 島嶼按鈕由 js/island/config.js 自動產生 -->
     <div class="hud-row" id="view-row"></div>
     <div class="hud-row">
-      <!-- 記錄頁（原本的 2.5D 花園）：記錄、月曆、血壓血糖表都在那裡 -->
-      <a class="hud-btn hud-record" href="record.html">📝 記錄</a>
-      <button class="hud-btn" id="btn-time">🌙 夜晚</button>
-      <button class="hud-btn" id="btn-rain">🌧️ 下雨</button>
-      <!-- 測試用：模擬媽媽記一筆、模擬過了半夜 -->
-      <button class="hud-btn demo-only" id="btn-record" style="display:none">📝 記一筆 (<span id="record-count">0</span>)</button>
+      <!-- 📝 記錄、📅 月曆：在群島裡直接記和看 -->
+      <button class="hud-btn hud-record" id="btn-rec">📝 記錄</button>
+      <button class="hud-btn" id="btn-hist">📅 月曆</button>
+      <!-- 以下是測試用（?demo=1 才出現）：切白天晚上、下雨、過一天、圖鑑。正式版天氣和白天晚上都跟著真的走，圖鑑點博物館開 -->
+      <button class="hud-btn demo-only" id="btn-time" style="display:none">🌙 夜晚</button>
+      <button class="hud-btn demo-only" id="btn-rain" style="display:none">🌧️ 下雨</button>
       <button class="hud-btn demo-only" id="btn-nextday" style="display:none">⏭ 過一天</button>
-      <button class="hud-btn" id="btn-gallery">📖 圖鑑</button>
+      <button class="hud-btn demo-only" id="btn-gallery" style="display:none">📖 圖鑑</button>
       <button class="hud-btn" id="btn-quality">⚡ 省電</button>
     </div>
   </div>
@@ -146,6 +254,16 @@
     </div>
   </div>
 
+  <!-- 📝 記錄視窗（內容由 js/island/record-panel.js 畫） -->
+  <div class="modal-backdrop" id="rec-modal">
+    <div class="modal-card rec-card"></div>
+  </div>
+
+  <!-- 📅 月曆與血壓血糖表（內容由 js/island/history-panel.js 畫） -->
+  <div class="modal-backdrop" id="his-modal">
+    <div class="modal-card rec-card his-card"></div>
+  </div>
+
   <!-- 📖 圖鑑：花／寵物／魚／裝飾品（分頁在 js/island/gallery.js 的 GALLERY_TABS） -->
   <div class="modal-backdrop" id="gal-modal">
     <div class="modal-card" style="max-width: 400px;">
@@ -154,6 +272,17 @@
       <div id="gal-count"></div>
       <div id="gal-body"></div>
       <button class="modal-close" id="gal-close">返回群島</button>
+    </div>
+  </div>
+
+  <!-- 🎉 改版大驚喜（改版後第一次打開跳一次；內容在 js/island/versions.js） -->
+  <div class="modal-backdrop" id="new-modal">
+    <div class="modal-card new-card">
+      <div class="new-burst">🎉</div>
+      <h3 class="new-title">大驚喜！</h3>
+      <p class="new-text" id="new-text"></p>
+      <button class="new-btn" id="new-ok">好的，去看看 🌸</button>
+      <button class="new-more" id="new-more">📜 看以前改了什麼</button>
     </div>
   </div>
 
