@@ -171,6 +171,11 @@
     .ver-title { font-size: 1.2rem; font-weight: 800; color: #2c3e50; }
     .ver-date { font-size: 0.95rem; color: #7f8c8d; margin: 2px 0 4px; }
     .ver-text { font-size: 1.1rem; line-height: 1.6; color: #34495e; }
+    /* 👣 步數上傳 */
+    .step-icon { font-size: 3.6rem; line-height: 1; }
+    .step-icon.walking { animation: step-walk 0.8s ease-in-out infinite alternate; }
+    @keyframes step-walk { from { transform: translateX(-12px) rotate(-8deg); } to { transform: translateX(12px) rotate(8deg); } }
+    #step-actions .new-btn + .new-btn { margin-top: 8px; }
     /* 🎉 改版大驚喜 */
     .new-card { max-width: 340px; }
     .new-burst { font-size: 4.2rem; line-height: 1; animation: new-pop 0.9s ease-out both; }
@@ -272,6 +277,16 @@
       <div id="gal-count"></div>
       <div id="gal-body"></div>
       <button class="modal-close" id="gal-close">返回群島</button>
+    </div>
+  </div>
+
+  <!-- 👣 步數自動上傳（跳到 iPhone 捷徑「上傳步數」；js/island/main.js 的 startStepSync） -->
+  <div class="modal-backdrop" id="step-modal">
+    <div class="modal-card new-card">
+      <div class="step-icon" id="step-icon">👣</div>
+      <h3 class="new-title" id="step-title"></h3>
+      <p class="new-text" id="step-msg" style="white-space: pre-line;"></p>
+      <div id="step-actions"></div>
     </div>
   </div>
 

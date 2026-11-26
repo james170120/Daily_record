@@ -567,7 +567,7 @@ function bloomCardText(f) {
 // 換日了（過了半夜）就重新整理，讓昨天的今日之花開出來
 async function refreshToday() {
   if (DEMO) return;
-  if (!stepSyncPending && Date.now() - lastFetch < 20000) return;
+  if (stepSync || Date.now() - lastFetch < 20000) return;   // 步數上傳中由 checkStepSyncResult 自己讀
   if (dateKey(new Date()) !== today) { location.reload(); return; }
   try {
     const r = await fetchRecords();
@@ -575,17 +575,6 @@ async function refreshToday() {
     counts = r.counts;
     recordsByDate = r.recordsByDate;
     updateBud();
-    if (stepSyncPending) {
-      stepSyncPending = false;
-      const steps = (recordsByDate?.[today] || []).filter(x => x.type === '步數').map(x => parseInt(x.content) || 0);
-      const max = steps.length ? Math.max(...steps) : 0;
-      if (max > stepsBeforeSync) {
-        openModal('👣', '步數收到了！', `今天已經走了 ${max} 步` + (max >= 3000 ? '，勤勞的蜜蜂也飛來了 🐝' : '，繼續加油 👣'));
-        checkNewUnlocks();
-      } else {
-        openModal('👣', '還沒收到步數', '捷徑好像還沒跑完，或沒有成功。\n可以等一下再回來看，或按「📝 記錄」→「步數」自己輸入。');
-      }
-    }
   } catch (e) { /* 沒網路就維持原樣 */ }
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshToday(); });
@@ -673,7 +662,6 @@ document.getElementById('modal-close-btn').addEventListener('click', () => {
 // 📝 記錄（js/island/record-panel.js）
 // ==========================================
 let reloadAfterModal = false;
-let stepSyncPending = false, stepsBeforeSync = 0;
 const demoRecords = {};   // 展示模式：記在這裡，不上傳
 
 // 展示模式：依假資料的每天筆數，生出看起來像真的紀錄（月曆、紀錄表才有東西看）
@@ -738,11 +726,7 @@ const recordPanel = createRecordPanel({
   save: postRecord,
   onOpenHistory: () => openHistory(),
   onKeyRejected: () => { Store.remove('garden_key'); askGardenKey('花園通行碼已經更換，請重新輸入').then(() => location.reload()); },
-  onStepSyncStart: () => {
-    stepSyncPending = true;
-    const steps = recordsFor(today).filter(x => x.type === '步數').map(x => parseInt(x.content) || 0);
-    stepsBeforeSync = steps.length ? Math.max(...steps) : 0;
-  },
+  onStepSync: () => startStepSync(),
   async onSaved({ payload, demo, message }) {
     const isNew = payload.id == null;
     if (demo) {
@@ -771,6 +755,111 @@ const recordPanel = createRecordPanel({
     if (payload.date !== today) reloadAfterModal = !demo;     // 補登昨天：昨天的今日之花要重新開
     if (!demo) checkNewUnlocks();
   }
+});
+
+// ==========================================
+// 👣 步數自動上傳（跟舊版花園一樣）
+//   點「步數」→ 說明 1.5 秒 → 跳到 iPhone 捷徑「上傳步數」（捷徑把健康 App 今天的步數 POST 到 n8n）
+//   → 回到群島後最多查 4 次（每次隔 2 秒）→ 成功恭喜；沒收到 → 再試一次 / 自己輸入
+// ==========================================
+const STEP_SHORTCUT = '上傳步數';
+const SHORTCUT_PERIOD = '捷徑';   // 捷徑送來的步數，時段會寫「捷徑」
+const BEE_STEP_GOAL = 3000;
+let stepSync = null;   // 上傳中 = { before: 送出前今天的步數筆數, leftApp: 已經跳去捷徑了 }
+const stepModal = document.getElementById('step-modal');
+
+function todayStepInfo() {
+  const recs = recordsFor(today).filter(r => r.type === '步數');
+  const steps = recs.map(r => parseInt(r.content) || 0);
+  return { count: recs.length, autoCount: recs.filter(r => r.period === SHORTCUT_PERIOD).length, max: steps.length ? Math.max(...steps) : 0 };
+}
+function stepRewardMsg(max) {
+  if (max >= BEE_STEP_GOAL) return `太厲害了！目標達成！\n本日步數已達 ${max} 步，為花園吸引了一隻勤勞的蜜蜂 🐝！`;
+  if (max >= 1500) return `已經走了 ${max} 步囉！\n再走一段路就能吸引蜜蜂來採蜜了，繼續加油 👣！`;
+  return `今天走了 ${max} 步，紀錄成功！\n多走動對身體很好喔，繼續保持！`;
+}
+// actions: [[文字, 動作, 是不是淡色按鈕]]
+function setStepView(icon, title, msg, actions, walking) {
+  const iconEl = document.getElementById('step-icon');
+  iconEl.textContent = icon;
+  iconEl.classList.toggle('walking', !!walking);
+  document.getElementById('step-title').textContent = title;
+  document.getElementById('step-msg').textContent = msg;
+  const box = document.getElementById('step-actions');
+  box.innerHTML = '';
+  actions.forEach(([label, fn, plain]) => {
+    const b = document.createElement('button');
+    b.className = plain ? 'new-more' : 'new-btn';
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    box.appendChild(b);
+  });
+  if (!stepModal.classList.contains('show')) {
+    stepModal.classList.add('show');
+    renderer.render(scene, camera);
+    isPaused = true;
+  }
+}
+function closeStepModal() {
+  stepModal.classList.remove('show');
+  isPaused = false;
+  wake();
+}
+function startStepSync() {
+  const sync = { before: todayStepInfo().count, leftApp: false };
+  stepSync = sync;
+  setStepView('👣', '步數上傳中，請稍等一下',
+    '手機會先跳到「捷徑」幫您把今天的步數送過來，\n跑完之後，請再回到群島，\n就能看到今天走了幾步囉 🌿',
+    [['✏️ 改成自己輸入步數', stepSyncManual, true]], true);
+  // 停一下讓媽媽看清楚說明，再跳去捷徑
+  setTimeout(() => {
+    if (stepSync !== sync) return;
+    location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(STEP_SHORTCUT);
+    // 5 秒後畫面都沒離開 = 捷徑沒有打開（例如在電腦上）
+    setTimeout(() => { if (stepSync === sync && !sync.leftApp) showStepSyncFail(); }, 5000);
+  }, 1500);
+}
+async function checkStepSyncResult(sync) {
+  setStepView('⏳', '正在確認步數…', '馬上就好，請稍等一下喔', [], false);
+  // 捷徑剛送出，資料可能要幾秒才進得來，最多查 4 次
+  for (let i = 0; i < 4; i++) {
+    try {
+      const r = await fetchRecords();
+      lastFetch = Date.now();
+      counts = r.counts;
+      recordsByDate = r.recordsByDate;
+      updateBud();
+    } catch (e) { /* 網路不穩，下一輪再試 */ }
+    if (stepSync !== sync) return;
+    const info = todayStepInfo();
+    if (info.count > sync.before) {
+      stepSync = null;
+      closeStepModal();
+      // 今天第一筆捷徑步數才有種子，之後再按只更新步數
+      openModal('🎉', '紀錄成功！', stepRewardMsg(info.max) + '\n\n' +
+        (info.autoCount <= 1 ? '🌰 你獲得了一顆新種子！' : '今天的步數種子已經領過囉，步數幫您更新好了 👣'));
+      checkNewUnlocks();
+      return;
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  if (stepSync === sync) showStepSyncFail();
+}
+function showStepSyncFail() {
+  stepSync = null;
+  setStepView('😅', '這次沒有收到步數',
+    '可能是網路不太穩，或捷徑還沒設定好。\n可以再試一次，或自己輸入步數喔！',
+    [['🔄 再試一次', startStepSync], ['✏️ 自己輸入步數', stepSyncManual], ['關閉', closeStepModal, true]], false);
+}
+function stepSyncManual() {
+  stepSync = null;
+  closeStepModal();
+  recordPanel.openManualSteps();
+}
+document.addEventListener('visibilitychange', () => {
+  if (!stepSync) return;
+  if (document.hidden) stepSync.leftApp = true;                  // 已經跳去捷徑了
+  else if (stepSync.leftApp) checkStepSyncResult(stepSync);     // 從捷徑回來了
 });
 
 async function needKey() {
@@ -1177,7 +1266,7 @@ if (DEBUG) {
   debugEl.style.display = 'block';
   // 只有 ?debug=1 才開放，方便在主控台測試
   window.__island = {
-    world, ctx, camera, countWaterDays, computeFishUnlocked, meteorState,
+    world, ctx, camera, countWaterDays, computeFishUnlocked, meteorState, startStepSync,
     setRecords(r) { recordsByDate = r; }
   };
 }

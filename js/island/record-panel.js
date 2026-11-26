@@ -5,7 +5,8 @@
 //   - 大按鈕、一個步驟一個畫面（先選項目 → 再填內容）
 //   - 不用系統的 alert/confirm：錯誤直接寫在畫面上；數字怪怪的要「再按一次儲存」才存
 //   - 時段（早／中／晚、早上／晚上）依現在時間先幫忙選好
-//   - 步數：今天的話先用 iPhone 捷徑「上傳步數」自動帶入，也可以自己輸入
+//   - 步數：今天的話點了就直接跑 iPhone 捷徑「上傳步數」（main.js 的 startStepSync，跟舊版一樣），
+//     捷徑失敗時可以改成自己輸入（openManualSteps）
 //
 // 用到的全域（跟原本花園共用的一般 <script>）：
 //   N8N_POST_URL（config.js）、gardenHeaders / isKeyRejected / getGardenKey（api.js）、getFormattedDate（utils.js）
@@ -25,7 +26,6 @@ export const RECORD_TYPES = [
 ];
 const PERIODS = { medical: ['早', '中', '晚', '睡前'], bp: ['早上', '晚上'] };
 const BP_PERIOD_TIME = { '早上': '08:00', '晚上': '20:00' };   // 血壓存代表時間（跟原本一樣）
-const STEP_SHORTCUT = '上傳步數';
 const WATER_GOAL = 1500, BEE_STEP_GOAL = 3000;
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -67,7 +67,7 @@ function el(tag, cls, text) {
 //   getRecords(date)  回傳那天的紀錄陣列
 //   save(payload)  真的送出（回傳 Promise<'ok' | 'rejected' | 'error'>）
 //   onSaved({ payload, demo }) 存好之後（main.js 重新讀資料、讓花苞長大、顯示恭喜）
-//   onStepSyncStart()  跳去 iPhone 捷徑之前
+//   onStepSync()       今天的步數：交給 main.js 跑 iPhone 捷徑（展示模式不會呼叫）
 export function createRecordPanel(opts) {
   const card = opts.root.querySelector('.rec-card');
   let date = dateKeyOf(new Date());
@@ -112,7 +112,15 @@ export function createRecordPanel(opts) {
       b.appendChild(el('span', 'rec-emoji', t.emoji));
       b.appendChild(el('span', 'rec-label', t.type));
       if (n) b.appendChild(el('span', 'rec-badge', '✓' + (n > 1 ? n : '')));
-      b.addEventListener('click', () => openForm(t));
+      b.addEventListener('click', () => {
+        // 今天的步數：直接叫 iPhone 捷徑上傳（捷徑只拿得到今天的；補登以前的日子用手動輸入）
+        if (t.cat === 'steps' && date === dateKeyOf(new Date()) && !opts.demo && opts.onStepSync) {
+          close();
+          opts.onStepSync();
+          return;
+        }
+        openForm(t);
+      });
       grid.appendChild(b);
     });
     card.appendChild(grid);
@@ -143,18 +151,6 @@ export function createRecordPanel(opts) {
 
     const form = el('div', 'rec-form');
     const fields = {};
-
-    // 步數：今天先用捷徑自動上傳
-    if (t.cat === 'steps' && !editRec && date === dateKeyOf(new Date()) && !opts.demo) {
-      const auto = el('button', 'rec-save rec-auto', '📲 自動上傳今天的步數');
-      auto.addEventListener('click', () => {
-        opts.onStepSyncStart?.();
-        close();
-        location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(STEP_SHORTCUT);
-      });
-      form.appendChild(auto);
-      form.appendChild(el('p', 'rec-hint', '會跳到 iPhone 的「捷徑」把健康 App 的步數送過來，跑完再回到群島就好。也可以在下面自己輸入：'));
-    }
 
     // 時段按鈕
     if (PERIODS[t.cat]) {
@@ -351,6 +347,12 @@ export function createRecordPanel(opts) {
     open(onDate) {
       date = onDate || dateKeyOf(new Date());
       renderPicker();
+      opts.root.classList.add('show');
+    },
+    // 捷徑沒成功 → 自己輸入今天的步數
+    openManualSteps() {
+      date = dateKeyOf(new Date());
+      openForm(RECORD_TYPES.find(t => t.cat === 'steps'));
       opts.root.classList.add('show');
     },
     close
