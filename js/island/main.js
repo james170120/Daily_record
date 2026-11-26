@@ -142,8 +142,8 @@ controls.minPolarAngle = 0.22;
 controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
 const cameraGoal = { active: false, pos: new THREE.Vector3(), target: new THREE.Vector3() };
-// 兩指移動的範圍：不能把島移出畫面太遠（按上方島嶼按鈕就會回到正中間）
-const panLimit = { center: new THREE.Vector3(), radius: 6 };
+// 兩指移動的範圍：整片群島都可以移過去，只是不能移到群島外面的空地（按上方島嶼按鈕會回到那座島正中間）
+const panLimit = { center: new THREE.Vector3(), radius: 30 };
 const panOff = new THREE.Vector3();
 function clampPan() {
   panOff.subVectors(controls.target, panLimit.center).setY(0);
@@ -156,6 +156,26 @@ function clampPan() {
 let currentView = 'main';
 const BASE_OFFSET = new THREE.Vector3(3.6, 5.2, 10.2);
 const OVERVIEW_DIR = new THREE.Vector3(3.0, 9.6, 17.8).normalize();
+
+function markViewButton(key) {
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === key));
+}
+
+// 兩指移到別的島上放開 → 那座島就變成「目前看的島」（陰影、寵物、上方按鈕都跟過去；鏡頭不會自己動）
+function followPannedIsland() {
+  if (currentView === 'overview' || cameraGoal.active) return;
+  let best = null, bestD = Infinity;
+  for (const isl of world.islands) {
+    if (!isl.unlocked) continue;
+    const d = Math.hypot(controls.target.x - isl.basePos.x, controls.target.z - isl.basePos.z);
+    if (d < isl.cfg.radius * 1.1 && d < bestD) { best = isl; bestD = d; }
+  }
+  if (!best || best.id === currentView) return;
+  currentView = best.id;
+  aimShadow(best.basePos, best.cfg.radius);
+  markViewButton(best.id);
+  best.ensureContent(ctx).then(wake).catch(showLoadError);
+}
 
 // 全景：自動框住所有島（之後多加島也不用改）
 function overviewFrame() {
@@ -181,18 +201,18 @@ function flyToView(key, immediate = false) {
     const dist = Math.max(f.dist * portrait, (f.radius * 0.92) / Math.sin(halfH));
     pos = target.clone().addScaledVector(OVERVIEW_DIR, dist);
     controls.maxDistance = Math.max(32, dist * 1.25);
-    panLimit.center.copy(f.target); panLimit.radius = f.radius * 0.8;
     aimShadow(f.target, f.radius);
   } else {
     const isl = world.byId[key];
     target = isl.basePos.clone().add(new THREE.Vector3(0, 0.7, 0));
     pos = target.clone().addScaledVector(BASE_OFFSET, (isl.cfg.radius / 4.35) * portrait);
     aimShadow(isl.basePos, isl.cfg.radius);
-    panLimit.center.copy(isl.basePos); panLimit.radius = isl.cfg.radius * 1.6;
     isl.ensureContent(ctx).then(wake).catch(showLoadError);
   }
 
-  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === key));
+  const wf = overviewFrame();
+  panLimit.center.copy(wf.target); panLimit.radius = wf.radius;
+  markViewButton(key);
 
   if (immediate) {
     cameraGoal.active = false;
@@ -1167,6 +1187,7 @@ function wake() {
 }
 controls.addEventListener('start', () => { cameraGoal.active = false; wake(); });
 controls.addEventListener('change', wake);
+controls.addEventListener('end', followPannedIsland);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { cancelAnimationFrame(rafId); rafId = 0; }
