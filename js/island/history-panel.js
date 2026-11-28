@@ -40,6 +40,7 @@ export function createHistoryPanel(opts) {
   let tableKind = 'bp';      // 'bp' 血壓 | 'glu' 血糖
   let month = new Date(); month.setDate(1);
   let dayKey = '';
+  let fromDay = '';          // 從某一天的明細點「看血壓表／血糖表」過來 → 表格下面有「← 回到這一天」
 
   const close = () => opts.root.classList.remove('show');
   const recs = (k) => opts.getRecords(k) || [];
@@ -53,7 +54,7 @@ export function createHistoryPanel(opts) {
     const row = el('div', 'rec-days');
     [['cal', '📅 月曆'], ['table', '🩺 血壓血糖表']].forEach(([v, label]) => {
       const b = el('button', 'rec-day' + (view === v ? ' on' : ''), label);
-      b.addEventListener('click', () => { view = v; render(); });
+      b.addEventListener('click', () => { view = v; fromDay = ''; render(); });
       row.appendChild(b);
     });
     card.appendChild(row);
@@ -127,7 +128,20 @@ export function createHistoryPanel(opts) {
       const box = el('div', 'his-group');
       box.style.borderLeftColor = color;
       let items = list.filter(r => types.includes(r.type));
-      box.appendChild(el('div', 'his-group-title', title + (opt.sum ? opt.sum(items) : '')));
+      const head = el('div', 'his-group-title', title + (opt.sum ? opt.sum(items) : ''));
+      if (opt.table) {
+        // 血壓、血糖：直接跳到那個月的血壓表／血糖表
+        const go = el('button', 'his-jump', opt.table === 'bp' ? '看血壓表 ›' : '看血糖表 ›');
+        go.addEventListener('click', () => {
+          tableKind = opt.table;
+          month = new Date(y, m - 1, 1);
+          fromDay = dayKey;
+          view = 'table';
+          render();
+        });
+        head.appendChild(go);
+      }
+      box.appendChild(head);
       if (!items.length) { box.appendChild(el('div', 'his-empty', '沒有紀錄')); return box; }
       if (opt.byPeriod) items.sort((a, b) => (order[a.period] || 9) - (order[b.period] || 9));
       else items.sort((a, b) => String(a.time).localeCompare(String(b.time)));
@@ -156,8 +170,8 @@ export function createHistoryPanel(opts) {
       group('🍽️ 飲食', '#f39c12', ['早餐', '午餐', '晚餐', '點心']),
       group('💧 喝水', '#3498db', ['喝水'], { sum: (it) => `（共 ${it.reduce((s, r) => s + (parseInt(r.content) || 0), 0)} ml）` }),
       group('👣 步數', '#2ecc71', ['步數'], { limit: STEP_DETAIL_LIMIT, sum: (it) => it.length ? `（最高 ${Math.max(...it.map(r => parseInt(r.content) || 0))} 步）` : '' }),
-      group('🩺 血壓', '#e84393', ['血壓'], { byPeriod: true }),
-      group('🩸 血糖', '#16a085', ['血糖']),
+      group('🩺 血壓', '#e84393', ['血壓'], { byPeriod: true, table: 'bp' }),
+      group('🩸 血糖', '#16a085', ['血糖'], { table: 'glu' }),
       group('💉 胰島素', '#e74c3c', ['胰島素'], { byPeriod: true }),
       group('💊 吃藥', '#27ae60', ['吃藥'], { byPeriod: true }),
       group('👩‍⚕️ 身體狀況', '#f1c40f', ['身體狀況'])
@@ -249,7 +263,13 @@ export function createHistoryPanel(opts) {
     card.appendChild(el('p', 'rec-hint', tableKind === 'bp'
       ? '血壓單位 mmHg，♡ 是脈搏（次／分）\n偏高：高壓 ≥ 140 或低壓 ≥ 90；偏低：高壓 < 90 或低壓 < 60'
       : '血糖單位 mg/dL，後面是量的時間'));
-    footer();
+    let back = null;
+    if (fromDay) {
+      const [, fm, fd] = fromDay.split('-').map(Number);
+      back = el('button', 'rec-cancel', `← 回到 ${fm}/${fd}`);
+      back.addEventListener('click', () => { dayKey = fromDay; fromDay = ''; view = 'day'; render(); });
+    }
+    footer(back);
   }
 
   function render() {
@@ -262,6 +282,7 @@ export function createHistoryPanel(opts) {
   return {
     open(which = 'cal') {
       view = which;
+      fromDay = '';
       month = new Date(); month.setDate(1);
       render();
       opts.root.classList.add('show');

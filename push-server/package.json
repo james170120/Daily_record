@@ -1,0 +1,13 @@
+{
+  "name": "garden-push",
+  "private": true,
+  "type": "module",
+  "description": "群島花園：每天 21:00（台灣時間）步數還沒上傳就送推播提醒",
+  "scripts": {
+    "start": "node send.js",
+    "test-push": "node send.js --test"
+  },
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}

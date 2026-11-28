@@ -134,7 +134,8 @@
     .his-count { font-size: 0.68rem; color: #27ae60; font-weight: 700; }
     .his-detail { display: flex; flex-direction: column; gap: 9px; }
     .his-group { border-left: 5px solid #ccc; background: #f8fafb; border-radius: 10px; padding: 8px 10px; }
-    .his-group-title { font-weight: 800; color: #34495e; margin-bottom: 4px; }
+    .his-group-title { font-weight: 800; color: #34495e; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .his-jump { border: none; border-radius: 12px; background: #fde2ee; color: #c2185b; font-size: 1.05rem; font-weight: 800; padding: 8px 12px; }
     .his-empty { color: #b2bec3; font-size: 0.9rem; }
     .his-item { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-top: 1px dashed #e3e8eb; font-size: 1rem; color: #2c3e50; }
     .his-item:first-of-type { border-top: none; }
@@ -242,6 +243,7 @@
       <button class="hud-btn demo-only" id="btn-rain" style="display:none">🌧️ 下雨</button>
       <button class="hud-btn demo-only" id="btn-nextday" style="display:none">⏭ 過一天</button>
       <button class="hud-btn demo-only" id="btn-gallery" style="display:none">📖 圖鑑</button>
+      <button class="hud-btn" id="btn-bell">🔔 提醒</button>
       <button class="hud-btn" id="btn-quality">⚡ 省電</button>
     </div>
   </div>

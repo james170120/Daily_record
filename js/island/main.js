@@ -16,6 +16,7 @@ import { createGallery } from './gallery.js';
 import { LATEST } from './versions.js';
 import { createRecordPanel, RECORD_TYPES } from './record-panel.js';
 import { createHistoryPanel } from './history-panel.js';
+import { pushSupport, pushIsOn, enablePush, disablePush } from './push.js';
 import { initThumbs, getThumb } from './thumbs.js';
 
 const container = document.getElementById('canvas-container');
@@ -683,7 +684,11 @@ function setModalIcon(icon) {
     iconEl.textContent = icon;
   }
 }
-function openModal(icon, title, desc) {
+let infoBackToGallery = false;   // 從圖鑑點進來的介紹 → 按鈕是「返回圖鑑」
+const modalCloseBtn = document.getElementById('modal-close-btn');
+function openModal(icon, title, desc, fromGallery = false) {
+  infoBackToGallery = fromGallery;
+  modalCloseBtn.textContent = fromGallery ? '返回圖鑑' : '返回群島';
   setModalIcon(icon);
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-desc').textContent = desc;
@@ -692,8 +697,9 @@ function openModal(icon, title, desc) {
   renderer.render(scene, camera);   // 先畫好一張當背景，再暫停
   isPaused = true;   // 彈窗打開時 3D 完全停止
 }
-document.getElementById('modal-close-btn').addEventListener('click', () => {
+modalCloseBtn.addEventListener('click', () => {
   modal.classList.remove('show');
+  if (infoBackToGallery) { infoBackToGallery = false; gallery.reopen(); return; }
   isPaused = false;
   wake();
   if (pendingAnnouncements.length) setTimeout(() => pendingAnnouncements.shift()(), 400);
@@ -904,6 +910,64 @@ document.addEventListener('visibilitychange', () => {
   else if (stepSync.leftApp) checkStepSyncResult(stepSync);     // 從捷徑回來了
 });
 
+// ==========================================
+// 🔔 晚上 9 點提醒（js/island/push.js；伺服器在 push-server/）
+// ==========================================
+const bellBtn = document.getElementById('btn-bell');
+function markBell() { bellBtn.textContent = pushIsOn() ? '🔔 提醒中' : '🔔 提醒'; }
+markBell();
+function openBell() {
+  if (DEMO) {
+    setStepView('🔔', '晚上 9 點提醒', '展示模式不會真的開啟。\n正式版：每天晚上 9 點，如果步數還沒上傳，\n手機會跳出一句鼓勵和提醒 🌙', [['好的', closeStepModal]]);
+    return;
+  }
+  const sup = pushSupport();
+  if (sup === 'need-home') {
+    setStepView('📱', '要從主畫面打開喔',
+      '請先按 Safari 下面的「分享」⬆️\n選「加入主畫面」，\n再從主畫面的花園圖示打開，\n就可以開提醒了 🌸', [['知道了', closeStepModal]]);
+  } else if (sup === 'old') {
+    setStepView('😢', '這支手機不能用提醒', '提醒需要 iOS 16.4 以上。\n其他功能都可以照常使用喔！', [['知道了', closeStepModal]]);
+  } else if (sup === 'blocked') {
+    setStepView('🔕', '通知被關掉了',
+      '請到 iPhone 的「設定」→「通知」\n找到「健康日記」，把「允許通知」打開，\n再回來按一次 🔔', [['知道了', closeStepModal]]);
+  } else if (pushIsOn()) {
+    setStepView('🔔', '晚上 9 點提醒：開啟中',
+      '每天晚上 9 點，如果步數還沒上傳，\n手機會跳出一句鼓勵和提醒 🌙\n（上傳過了就不會吵您）',
+      [['好的', closeStepModal], ['🔕 關掉提醒', () => toggleBell(false), true]]);
+  } else {
+    setStepView('🔔', '要開晚上 9 點提醒嗎？',
+      '每天晚上 9 點，如果步數還沒上傳，\n手機會跳出一句鼓勵和提醒 🌙\n\n按下開啟後，手機問「允許通知」\n請按「允許」喔',
+      [['🔔 開啟提醒', () => toggleBell(true)], ['先不要', closeStepModal, true]]);
+  }
+}
+async function toggleBell(on) {
+  if (await needKey()) return;
+  setStepView('⏳', on ? '正在開啟…' : '正在關掉…', '馬上就好，請稍等一下喔', [], false);
+  const r = on ? await enablePush(postRecord) : await disablePush(postRecord);
+  markBell();
+  if (r === 'ok') {
+    setStepView(on ? '🎉' : '🔕', on ? '提醒開好了！' : '提醒關掉了',
+      on ? '晚上 9 點如果還沒上傳步數，\n就會收到花園的小提醒 🌙' : '想再開的時候，按上面的 🔔 就可以了',
+      [['好的', closeStepModal]]);
+  } else if (r === 'denied') {
+    setStepView('🔕', '沒有允許通知', '沒關係，想開的時候再按一次 🔔\n手機問的時候按「允許」就可以了', [['知道了', closeStepModal]]);
+  } else {
+    setStepView('😅', '這次沒有設定成功', '可能是網路不太穩，請等一下再試一次', [['🔄 再試一次', () => toggleBell(on)], ['關閉', closeStepModal, true]]);
+  }
+}
+bellBtn.addEventListener('click', openBell);
+
+// 點通知進來（網址有 ?steps=1，或群島本來就開著收到 sw.js 的訊息）→ 一顆大大的上傳步數按鈕
+function offerStepUpload() {
+  if (DEMO || stepSync) return;
+  if (todayStepInfo().count) return;   // 已經有了
+  setStepView('👣', '今天的步數還沒上傳喔', '按下面的按鈕，\n手機會幫您把今天走的步數送過來 🌿',
+    [['👣 上傳步數', startStepSync], ['等一下再說', closeStepModal, true]]);
+}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data?.type === 'steps' && !booting) offerStepUpload(); });
+}
+
 async function needKey() {
   if (DEMO || getGardenKey()) return false;
   await askGardenKey('');
@@ -956,15 +1020,16 @@ const gallery = createGallery({
   const pic = it.img || (it.thumbKey ? getThumb(it.thumbKey, !it.unlocked) : it.emoji);
   if (it.unlocked) openModal(pic, it.name, it.desc + (it.tip ? `
 
-💡 ${it.tip}` : ''));
+💡 ${it.tip}` : ''), true);
   else openModal(it.img || it.thumbKey ? pic : '❓', '???', `還沒有收集到。
 
-解鎖條件：${it.lockText}`);
+解鎖條件：${it.lockText}`, true);
 });
 function openGallery(tab) { gallery.open(tab); }
 document.getElementById('btn-gallery').addEventListener('click', () => openGallery());
 document.getElementById('gal-close').addEventListener('click', () => {
   gallery.close();
+  if (isPaused) { isPaused = false; wake(); }   // 剛看過圖鑑介紹（那時 3D 暫停了）
   if (!booting && pendingAnnouncements.length) setTimeout(() => pendingAnnouncements.shift()(), 400);   // 看完改版紀錄，接著顯示解鎖通知
 });
 
@@ -1405,6 +1470,10 @@ async function start() {
     setNight(isNight);
     wake();
     booting = false;
+    if (new URLSearchParams(location.search).has('steps')) {
+      history.replaceState(null, '', location.pathname + location.search.replace(/[?&]steps=1/, '').replace(/^&/, '?'));
+      pendingAnnouncements.push(offerStepUpload);
+    }
     queueWhatsNew();
     if (pendingAnnouncements.length) setTimeout(() => pendingAnnouncements.shift()(), 1200);
     precacheModelsWhenIdle();

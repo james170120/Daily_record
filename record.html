@@ -1475,7 +1475,7 @@
                 const data = await response.json();
                 recordsDB = {};
                 // 🌟 濾掉系統報錯，避免錯誤被當成健康紀錄 (灌水連續天數、長出種子) 🌟
-                data.filter(item => item.category !== 'error').forEach(item => {
+                data.filter(item => item.category !== 'error' && item.category !== 'push').forEach(item => {
                     const cleanDate = item.date.substring(0, 10);
                     if(!recordsDB[cleanDate]) recordsDB[cleanDate] = [];
                     recordsDB[cleanDate].push(item);

@@ -47,7 +47,7 @@ export async function tryGardenKey(key) {
 
 export function groupByDate(data) {
   const out = {};
-  (Array.isArray(data) ? data : []).filter(r => r && r.category !== 'error' && r.date).forEach(r => {
+  (Array.isArray(data) ? data : []).filter(r => r && r.category !== 'error' && r.category !== 'push' && r.date).forEach(r => {
     const d = String(r.date).substring(0, 10);
     (out[d] = out[d] || []).push(r);
   });

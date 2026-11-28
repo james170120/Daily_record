@@ -92,6 +92,7 @@ export const GALLERY_TABS = [
 // el: { modal, tabs, body, count }；getState(): 目前狀態；showDetail(item): 點格子後顯示介紹
 export function createGallery(el, getState, showDetail) {
   let current = GALLERY_TABS[0].id;
+  let lastScroll = 0;
 
   function render() {
     const s = getState();
@@ -148,7 +149,7 @@ export function createGallery(el, getState, showDetail) {
         sub.textContent = it.sub;
         cell.appendChild(sub);
       }
-      cell.addEventListener('click', () => { el.modal.classList.remove('show'); showDetail(it); });
+      cell.addEventListener('click', () => { lastScroll = el.body.scrollTop; el.modal.classList.remove('show'); showDetail(it); });
       grid.appendChild(cell);
     });
     el.body.appendChild(grid);
@@ -159,6 +160,12 @@ export function createGallery(el, getState, showDetail) {
     open(tabId) {
       if (tabId) current = tabId;
       render();
+      el.modal.classList.add('show');
+    },
+    // 看完一個圖鑑回來：同一頁、捲到剛剛的位置
+    reopen() {
+      render();
+      el.body.scrollTop = lastScroll;
       el.modal.classList.add('show');
     },
     close() { el.modal.classList.remove('show'); }
