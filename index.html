@@ -26,11 +26,13 @@
     /* 上方：島嶼按鈕，一排 3 個（6 個剛好兩行） */
     #view-row { display: grid; grid-template-columns: repeat(3, 1fr); }
     #view-row .hud-btn { padding: 8px 4px; font-size: min(0.9rem, 3.7vw); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    /* 下方靠左：記錄、月曆、提醒、省電 */
-    .hud-actions {
-      position: fixed; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 10;
-      display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; pointer-events: none;
+    /* 畫面下方：按鈕（靠左）在上、提示字在最下面
+       提示字墊在底下，按鈕離 iPhone 底部的滑動區遠一點，比較不會誤觸回主畫面 */
+    .hud-dock {
+      position: fixed; left: 14px; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 10;
+      display: flex; flex-direction: column; gap: 10px; pointer-events: none;
     }
+    .hud-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
     .hud-actions .hud-btn { pointer-events: auto; padding: 8px 11px; }   /* 正式版 4 個在 iPhone 寬度排成一行 */
     /* 不用 backdrop-filter：舊 iPhone 疊在 WebGL 上會掉幀 */
     .hud-btn {
@@ -47,8 +49,7 @@
     .hud-record { text-decoration: none; background: #f39c12; color: #fff; border-color: #e67e22; }
 
     .hud-bottom {
-      position: fixed; bottom: calc(66px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
-      z-index: 10; pointer-events: none;
+      align-self: center; pointer-events: none;
       background: rgba(15, 23, 42, 0.72); color: #fff;
       padding: 8px 16px; border-radius: 20px; font-size: 0.85rem;
       max-width: 92vw; text-align: center;
@@ -245,7 +246,8 @@
     <div class="hud-row" id="view-row"></div>
   </div>
 
-  <!-- 畫面下方靠左：📝 記錄、📅 月曆、🔔 提醒、⚡ 省電 -->
+  <!-- 畫面下方：📝 記錄、📅 月曆、🔔 提醒、⚡ 省電（靠左），最下面是提示字 -->
+  <div class="hud-dock">
   <div class="hud-actions">
       <button class="hud-btn hud-record" id="btn-rec">📝 記錄</button>
       <button class="hud-btn" id="btn-hist">📅 月曆</button>
@@ -259,6 +261,7 @@
   </div>
 
   <div class="hud-bottom" id="status-tip">載入群島中...</div>
+  </div>
   <svg id="press-ring" viewBox="0 0 74 74"><circle cx="37" cy="37" r="31" /></svg>
   <div id="debug-panel"></div>
 
@@ -340,14 +343,6 @@
   <script type="module" src="js/island/main.js"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-    // 下方按鈕換行時（例如展示模式多了測試按鈕），提示字往上讓開
-    function placeTip() {
-      const h = document.querySelector('.hud-actions').offsetHeight;
-      document.getElementById('status-tip').style.bottom = `calc(${h + 24}px + env(safe-area-inset-bottom))`;
-    }
-    addEventListener('resize', placeTip);
-    addEventListener('load', placeTip);
-    setTimeout(placeTip, 1500);
   </script>
 </body>
 </html>
