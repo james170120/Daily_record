@@ -1432,6 +1432,7 @@ async function loadRecordsWithKey() {
 
 async function start() {
   if (DEMO) document.querySelectorAll('.demo-only').forEach(b => b.style.display = '');
+  window.placeTip?.();
   applyQuality();
   buildViewButtons();
   flyToView('main', true);

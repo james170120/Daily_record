@@ -23,6 +23,15 @@
       display: flex; flex-direction: column; gap: 8px; pointer-events: none;
     }
     .hud-row { display: flex; flex-wrap: wrap; gap: 7px; pointer-events: auto; }
+    /* 上方：島嶼按鈕，一排 3 個（6 個剛好兩行） */
+    #view-row { display: grid; grid-template-columns: repeat(3, 1fr); }
+    #view-row .hud-btn { padding: 8px 4px; font-size: min(0.9rem, 3.7vw); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* 下方靠左：記錄、月曆、提醒、省電 */
+    .hud-actions {
+      position: fixed; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 10;
+      display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; pointer-events: none;
+    }
+    .hud-actions .hud-btn { pointer-events: auto; padding: 8px 11px; }   /* 正式版 4 個在 iPhone 寬度排成一行 */
     /* 不用 backdrop-filter：舊 iPhone 疊在 WebGL 上會掉幀 */
     .hud-btn {
       background: rgba(255, 255, 255, 0.94);
@@ -38,7 +47,7 @@
     .hud-record { text-decoration: none; background: #f39c12; color: #fff; border-color: #e67e22; }
 
     .hud-bottom {
-      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      position: fixed; bottom: calc(66px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
       z-index: 10; pointer-events: none;
       background: rgba(15, 23, 42, 0.72); color: #fff;
       padding: 8px 16px; border-radius: 20px; font-size: 0.85rem;
@@ -213,7 +222,7 @@
     .achv-cell.locked .achv-name { color: #95a5a6; letter-spacing: 2px; }
 
     #debug-panel {
-      display: none; position: fixed; right: 10px; bottom: 60px; z-index: 20;
+      display: none; position: fixed; right: 10px; top: 130px; z-index: 20;
       background: rgba(0, 0, 0, 0.7); color: #9fffa8; font: 12px/1.5 monospace;
       padding: 6px 10px; border-radius: 8px; pointer-events: none;
     }
@@ -234,8 +243,10 @@
   <div class="hud-top">
     <!-- 島嶼按鈕由 js/island/config.js 自動產生 -->
     <div class="hud-row" id="view-row"></div>
-    <div class="hud-row">
-      <!-- 📝 記錄、📅 月曆：在群島裡直接記和看 -->
+  </div>
+
+  <!-- 畫面下方靠左：📝 記錄、📅 月曆、🔔 提醒、⚡ 省電 -->
+  <div class="hud-actions">
       <button class="hud-btn hud-record" id="btn-rec">📝 記錄</button>
       <button class="hud-btn" id="btn-hist">📅 月曆</button>
       <!-- 以下是測試用（?demo=1 才出現）：切白天晚上、下雨、過一天、圖鑑。正式版天氣和白天晚上都跟著真的走，圖鑑點博物館開 -->
@@ -245,7 +256,6 @@
       <button class="hud-btn demo-only" id="btn-gallery" style="display:none">📖 圖鑑</button>
       <button class="hud-btn" id="btn-bell">🔔 提醒</button>
       <button class="hud-btn" id="btn-quality">⚡ 省電</button>
-    </div>
   </div>
 
   <div class="hud-bottom" id="status-tip">載入群島中...</div>
@@ -330,6 +340,14 @@
   <script type="module" src="js/island/main.js"></script>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+    // 下方按鈕換行時（例如展示模式多了測試按鈕），提示字往上讓開
+    function placeTip() {
+      const h = document.querySelector('.hud-actions').offsetHeight;
+      document.getElementById('status-tip').style.bottom = `calc(${h + 24}px + env(safe-area-inset-bottom))`;
+    }
+    addEventListener('resize', placeTip);
+    addEventListener('load', placeTip);
+    setTimeout(placeTip, 1500);
   </script>
 </body>
 </html>
